@@ -1,0 +1,7 @@
+- Proper handling of 'screen' sessions
+- Add functions that handle screen resizing
+- Add async events (dialog boxes etc)
+- Fix cursor movement functions
+- Uniform list handling (list_head)
+- Resign from ncurses library (?)
+  
