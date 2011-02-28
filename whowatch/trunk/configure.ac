@@ -33,7 +33,7 @@ AC_HEADER_DIRENT
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
 AC_CHECK_HEADERS(fcntl.h sys/ioctl.h sys/time.h unistd.h)
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h netinet/in.h stdlib.h string.h sys/ioctl.h sys/param.h sys/time.h termios.h unistd.h utmp.h curses.h])
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h netinet/in.h stdlib.h string.h sys/ioctl.h sys/param.h sys/user.h sys/time.h termios.h unistd.h utmp.h curses.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -91,14 +91,16 @@ sysctl(mib, 4, 0, &len, 0, 0);
 ],
 [AC_MSG_RESULT(yes)
 AC_DEFINE([HAVE_PROCESS_SYSCTL], [1],
-          [Define to 1 if sysctl() can be used (BSD systems)])],
-AC_MSG_RESULT(no))
+          [Define to 1 if sysctl() can be used (BSD systems)])]
+ac_cv_func_sysctl=yes,
+AC_MSG_RESULT(no)
+ac_cv_func_sysctl=no)
 
 dnl Set SYSTEM according to choosen unix variant
-if test "$HAVE_PROCESS_SYSCTL" = ""; then
-  system="linux"
-else
+if test "x$ac_cv_func_sysctl" = "xyes"; then
   system="bsd"
+else
+  system="linux"
 fi
 
 AC_SUBST([SYSTEM], $system)
