@@ -9,5 +9,5 @@ whowatch_SOURCES = block.c help.c info_box.c input_box.c kbd.c kbd.h list.h \
                    whowatch.c whowatch.h
 whowatch_LDADD = sys/$(SYSTEM)/lib$(SYSTEM).a
 
-EXTRA_DIST = test.c input_box.c.backup
+EXTRA_DIST = test.c
 
