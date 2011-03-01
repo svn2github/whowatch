@@ -4,11 +4,11 @@
 AC_PREREQ([2.67])
 AC_INIT([whowatch], [1.6.1])
 AM_INIT_AUTOMAKE
-AC_CONFIG_SRCDIR([src/whowatch.c])
+AC_CONFIG_SRCDIR([src/whowatch.cc])
 AC_CONFIG_HEADERS([src/config.h])
 
 # Checks for programs.
-AC_PROG_CC
+AC_PROG_CXX
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB

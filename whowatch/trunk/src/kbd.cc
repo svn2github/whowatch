@@ -49,10 +49,11 @@ static int st_mouse(int c);
 
 static int (*state)(int) = st_start;
 
-struct seq {
+static struct seq {
+  seq () { argp = arg; }
 	char type, mod, argf, delf;
 	int arg[16], *argp;
-} seq = {argp: seq.arg};
+} seq;
 
 #define CSISEQ (seq.type == '[')
 #define SS3SEQ (seq.type == 'O')

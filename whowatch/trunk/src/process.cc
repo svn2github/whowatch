@@ -68,7 +68,7 @@ static void synchronize(void)
 			current = &((*current)->next);
 			continue;
 		}
-		z = malloc(sizeof *z);
+		z = (process*)malloc(sizeof *z);
 		if (!z) allocate_error();
 		allocated++;
 		proc_win.d_lines++;

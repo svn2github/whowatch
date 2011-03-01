@@ -337,7 +337,7 @@ AGAIN:
 		break;
 		}
 	}	
-	type = dlsym(h, "plugin_type");
+	type = (int*)dlsym(h, "plugin_type");
 	if((err = dlerror())) goto ERROR;	
 	if(*type >= SUBWIN_NR) {
 		snprintf(dlerr, sizeof dlerr, "Unknown plugin type [%d]", *type);
@@ -345,12 +345,12 @@ AGAIN:
 		return dlerr;
 	}	
 	target = sb[*type];
-	target->plugin_init = dlsym(h, "plugin_init");
+	target->plugin_init = (int (*) (void*))dlsym(h, "plugin_init");
 	if((err = dlerror())) goto ERROR;
-	target->plugin_draw = dlsym(h, "plugin_draw");
+	target->plugin_draw = (void (*) (void*))dlsym(h, "plugin_draw");
 	if((err = dlerror())) goto ERROR;
-	target->plugin_clear = dlsym(h, "plugin_clear");
-	target->plugin_cleanup = dlsym(h, "plugin_cleanup");
+	target->plugin_clear = (void (*) ())dlsym(h, "plugin_clear");
+	target->plugin_cleanup = (void (*) ())dlsym(h, "plugin_cleanup");
 	/* close previous library if it was loaded */
 	if(target->handle) {
 		int i;
@@ -401,7 +401,7 @@ void subwin_init(void)
 	sub_main.plugin_draw = dummy_draw;
 	sub_main.plugin_clear = dummy;
 	sub_main.plugin_cleanup = dummy;
-	main_pad = calloc(1, sizeof(struct pad_t));
+	main_pad = (pad_t*)calloc(1, sizeof(struct pad_t));
 	if(!main_pad) prg_exit("subwin_init(): cannot allocate memory.");
 	sub_main.arrow = -1;
 	memcpy(&sub_proc, &sub_main, sizeof(sub_main));

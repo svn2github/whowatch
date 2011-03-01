@@ -76,7 +76,7 @@ static struct submenu_t *add_submenu(char *s)
 	struct submenu_t *t;
 	static int pos = TITLE_START;
 	
-	t = calloc(1, sizeof *t);
+	t = (submenu_t*)calloc(1, sizeof *t);
 	if(!t) prg_exit("add_submenu(): cannot allocate memory.");
 	t->title = s;
 	INIT_LIST_HEAD(&t->items);

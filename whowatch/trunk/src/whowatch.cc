@@ -32,12 +32,12 @@ struct key_handler {
  * These are key bindings to handle cursor movement.
  */
 static struct key_handler key_handlers[] = {
-	{ KBD_UP, cursor_up	 	},
-	{ KBD_DOWN, cursor_down 	},
-	{ KBD_PAGE_DOWN, page_down	},
-	{ KBD_PAGE_UP, page_up		},
-	{ KBD_HOME, key_home		},
-	{ KBD_END, key_end		}
+	{ (key)KBD_UP, cursor_up	 	},
+	{ (key)KBD_DOWN, cursor_down 	},
+	{ (key)KBD_PAGE_DOWN, page_down	},
+	{ (key)KBD_PAGE_UP, page_up		},
+	{ (key)KBD_HOME, key_home		},
+	{ (key)KBD_END, key_end		}
 };  
 
 /*
@@ -174,7 +174,7 @@ static void get_rows_cols(int *y, int *x)
 	prg_exit("get_row_cols(): ioctl error: cannot read screen size.");
 }								
 
-static void winch_handler()
+static void winch_handler (int unused)
 {
 	size_changed++;
 }
@@ -209,7 +209,7 @@ static void resize(void)
 	size_changed = 0;
 }
 
-static void int_handler()
+static void int_handler (int unused)
 {
 	curses_end();
 	exit(0);
@@ -232,7 +232,7 @@ int main (int argc, char **argv)
 	get_boot_time();
 	get_rows_cols(&screen_rows, &screen_cols);
 	buf_size = screen_cols + screen_cols/2;
-	line_buf = malloc(buf_size);
+	line_buf = (char*)malloc(buf_size);
 	if (!line_buf)
 		errx(1, "Cannot allocate memory for buffer.");
 

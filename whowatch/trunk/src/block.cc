@@ -42,7 +42,7 @@ struct _block_tbl_t {
 static struct _block_tbl_t *new_block(int size, struct list_head *h)
 {
 	struct _block_tbl_t *tmp;
-	tmp = calloc(1, sizeof *tmp);
+	tmp = (_block_tbl_t*)calloc(1, sizeof *tmp);
 	if(!tmp) prg_exit("new_block(): Cannot allocate memory. [1]\n");
 	tmp->_block_t = calloc(1, size * TBL_SIZE);
 	dolog("%s: new block(%d) - alloc size = %d\n",
@@ -122,9 +122,9 @@ int i = 0;
 	return -1;
 FOUND:
 	dolog("%s: %p pointer found in %d\n", __FUNCTION__, p, i);
-	tmp->map &= ~(1<<(p - tmp->_block_t)/size);
+	tmp->map &= ~(1<<((char*)p - (char*)tmp->_block_t)/size);
 	dolog("%s: setting map pos %d to zero, map = %x\n",
-		__FUNCTION__, (p - tmp->_block_t)/size, tmp->map);
+	      __FUNCTION__, ((char*)p - (char*)tmp->_block_t)/size, tmp->map);
 	return 0;
 }		 	
 

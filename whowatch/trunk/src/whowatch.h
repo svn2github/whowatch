@@ -107,7 +107,7 @@ int below(int, struct window *);
 int above(int, struct window *);
 int outside(int, struct window *);
 void win_init(void);
-int print_line(struct window *w, char *s, int line, int virtual);
+int print_line(struct window *w, char *s, int line, int virtual_);
 int echo_line(struct window *w, char *s, int line);
 void cursor_on(struct window *w, int line);
 void cursor_off(struct window *w, int line);

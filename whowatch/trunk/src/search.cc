@@ -9,7 +9,7 @@ static regex_t cur_reg;
 /* 
  * Called by getprocbyname() and user_search(), instead of simple strncmp().
  */
-inline int reg_match(const char *s)
+int reg_match(const char *s)
 {
 	return !regexec(&cur_reg, s, 0, 0, REG_NOTEOL); 
 }

@@ -20,8 +20,8 @@ LIST_HEAD(users_l);
 static int wtmp_fd;
 static int toggle;	/* if 0 show cmd line else show idle time 	*/
 
-char *line_buf;		/* global buffer for line printing		*/
-int buf_size;		/* allocated buffer size			*/
+extern char *line_buf;		/* global buffer for line printing		*/
+extern int buf_size;		/* allocated buffer size			*/
 
 #ifdef HAVE_PROCESS_SYSCTL
 int get_login_pid(char *);
@@ -85,7 +85,7 @@ struct user_t *alloc_user(struct utmp *entry)
 {
 	struct user_t *u;
 	int ppid;
-	u = calloc(1, sizeof *u);
+	u = (user_t*)calloc(1, sizeof *u);
 	if(!u) errx(1, "Cannot allocate memory.");
 	strncpy(u->name, entry->ut_user, UT_NAMESIZE);
 	strncpy(u->tty, entry->ut_line, UT_LINESIZE);

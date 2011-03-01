@@ -40,7 +40,7 @@ static void alloc_color(void)
  */
 void win_init(void)
 {
-	curs_buf = realloc(curs_buf, screen_cols * sizeof(chtype));
+  curs_buf = (chtype*)realloc(curs_buf, screen_cols * sizeof(chtype));
 	if(!curs_buf) errx(1, "%s: Cannot allocate memory.", __FUNCTION__);
 	bzero(curs_buf, sizeof(chtype) * screen_cols);
 	users_list.rows = screen_rows - RESERVED_LINES - 1;
@@ -192,18 +192,18 @@ int inline scr_line(int l, struct window *w)
  * Returns -1 if a given data line number is above visible part of a
  * window, 1 if below, 0 if inside.
  */
-inline int outside(int l, struct window *w)
+int outside(int l, struct window *w)
 {
 	if(l < w->offset) return -1;
 	return (l > w->offset + w->rows);
 }
 
-inline int below(int l, struct window *w)
+int below(int l, struct window *w)
 {
 	return (outside(l, w) == 1);
 }
 
-inline int above(int l, struct window *w)
+int above(int l, struct window *w)
 {
 	return (outside(l, w) == -1);
 }
@@ -225,19 +225,19 @@ static inline int at_end(int line, struct window *w)
 }
 											
 /*
- * If virtual is not 0 then update window parameters but don't display
+ * If virtual_ is not 0 then update window parameters but don't display
  */	
-int print_line(struct window *w, char *s, int line, int virtual)
+int print_line(struct window *w, char *s, int line, int virtual_)
 {
 	int r = scr_line(line, w);
 
 	/* line is below screen */
 //	if(below(line, w)) return 0;
 
-	if (!virtual) echo_line(w, s, r);
+	if (!virtual_) echo_line(w, s, r);
 	
 	/* printed line is at the cursor position */
-	if (r == w->cursor && !virtual)
+	if (r == w->cursor && !virtual_)
 		cursor_on(w, w->cursor);
 	return 1;
 }
