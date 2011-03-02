@@ -77,7 +77,7 @@ char *get_cmdline(int pid)
 	int c;
         FILE *f;
         int i = 0;
-        if(!full_cmd) goto no_full;
+        if(!g_full_cmd) goto no_full;
         memset(buf, 0, sizeof buf);
         sprintf(buf, "/proc/%d/cmdline",pid);
         if (!(f = fopen(buf, "rt")))

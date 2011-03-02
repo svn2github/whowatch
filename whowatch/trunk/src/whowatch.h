@@ -29,13 +29,17 @@
 enum key { ENTER=0x100, UP, DOWN, LEFT, RIGHT, DELETE, ESC, CTRL_K,                      
                 CTRL_I, PG_DOWN, PG_UP, HOME, END, BACKSPACE, TAB };
 
-extern FILE *debug_file;
-extern int screen_rows, screen_cols;
-extern char *line_buf;
-extern int buf_size;
-extern unsigned long long ticks;
-extern WINDOW *main_win;
-extern int full_cmd;
+#ifdef DEBUG
+extern FILE *g_debug_file;
+#endif
+
+extern int g_screen_rows;
+extern int g_screen_cols;
+extern char *g_line_buf; /* global buffer for line printing */
+extern int g_buf_size; /* allocated buffer size	*/
+extern unsigned long long g_ticks;
+extern WINDOW *g_main_win;
+extern bool g_full_cmd;
 
 /*
  * Data associated with window are line numbered. If scrolling
@@ -68,8 +72,11 @@ struct user_t
         int line;                       /* line number                  */
 };
 
-extern struct window users_list, proc_win, help_win, info_win;
-extern struct window *current;
+extern struct window g_users_list;
+extern struct window g_proc_win;
+extern struct window g_help_win;
+extern struct window g_info_win;
+extern struct window *g_current;
 
 struct process
 {

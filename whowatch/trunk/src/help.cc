@@ -53,8 +53,8 @@ static void show_help(void *unused)
 {
 	dolog("%s: printing help\n", __FUNCTION__);
 	general();
-	if(current == &users_list) userwin_help();
-	if(current == &proc_win) procwin_help();	
+	if (g_current == &g_users_list) userwin_help();
+	if (g_current == &g_proc_win) procwin_help();	
 	sub_help();
 }
 

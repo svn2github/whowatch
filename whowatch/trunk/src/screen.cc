@@ -6,13 +6,13 @@
 #include "config.h"
 #include "whowatch.h"
 
-struct window help_win, info_win;
+struct window g_help_win;
+struct window g_info_win;
 static chtype *curs_buf;
-extern int screen_cols;
-int old_curs_vis = 1;	/* this is the cursor mode, set to normal as default */ 
-WINDOW *main_win;
+static int old_curs_vis = 1;	/* this is the cursor mode, set to normal as default */ 
+WINDOW *g_main_win;
 
-char *help_line[] = 
+static char *help_line[] = 
 	{
 	"\001[F1]Help [F9]Menu [ENT]proc all[t]ree [i]dle/cmd [c]md [d]etails [s]ysinfo",
 	"\001[ENT]users [c]md all[t]ree [d]etails [o]wner [s]ysinfo sig[l]ist ^[K]ILL",
@@ -40,57 +40,57 @@ static void alloc_color(void)
  */
 void win_init(void)
 {
-  curs_buf = (chtype*)realloc(curs_buf, screen_cols * sizeof(chtype));
+  curs_buf = (chtype*)realloc(curs_buf, g_screen_cols * sizeof(chtype));
 	if(!curs_buf) errx(1, "%s: Cannot allocate memory.", __FUNCTION__);
-	bzero(curs_buf, sizeof(chtype) * screen_cols);
-	users_list.rows = screen_rows - RESERVED_LINES - 1;
-	users_list.cols = screen_cols - 2; 	
-	proc_win.rows = users_list.rows;
-	info_win.cols = help_win.cols = proc_win.cols = users_list.cols;
+	bzero(curs_buf, sizeof(chtype) * g_screen_cols);
+	g_users_list.rows = g_screen_rows - RESERVED_LINES - 1;
+	g_users_list.cols = g_screen_cols - 2; 	
+	g_proc_win.rows = g_users_list.rows;
+	g_info_win.cols = g_help_win.cols = g_proc_win.cols = g_users_list.cols;
 }	
 
 void curses_init()
 {
 	win_init();
 	initscr();
-	users_list.wd = newwin(users_list.rows + 1, COLS, 2 ,0);
-	proc_win.wd = users_list.wd;
+	g_users_list.wd = newwin(g_users_list.rows + 1, COLS, 2 ,0);
+	g_proc_win.wd = g_users_list.wd;
 
-	help_win.wd = newwin(1, COLS, users_list.rows + RESERVED_LINES, 0);
-	info_win.wd = newwin(2, COLS, 0, 0);
-	if (!info_win.wd || !help_win.wd || 
-		!users_list.wd || !proc_win.wd){
+	g_help_win.wd = newwin(1, COLS, g_users_list.rows + RESERVED_LINES, 0);
+	g_info_win.wd = newwin(2, COLS, 0, 0);
+	if (!g_info_win.wd || !g_help_win.wd || 
+		!g_users_list.wd || !g_proc_win.wd){
 		endwin();
 		fprintf(stderr, "Ncurses library cannot create window\n");
 		exit(0);
 	}
-	main_win = users_list.wd;
-	wattrset(users_list.wd, A_BOLD);
+	g_main_win = g_users_list.wd;
+	wattrset(g_users_list.wd, A_BOLD);
         old_curs_vis = curs_set(0);                    /* disable cursor */
         start_color();
 	alloc_color();
-	wattrset(proc_win.wd, COLOR_PAIR(3));       
-	wattrset(users_list.wd, COLOR_PAIR(3));       
-	wattrset(help_win.wd, COLOR_PAIR(3));       
-	wattrset(info_win.wd, COLOR_PAIR(3));
-	wbkgd(users_list.wd, COLOR_PAIR(3)); 
-	wbkgd(help_win.wd, COLOR_PAIR(3)); 
-	wbkgd(info_win.wd, COLOR_PAIR(3)); 
+	wattrset(g_proc_win.wd, COLOR_PAIR(3));       
+	wattrset(g_users_list.wd, COLOR_PAIR(3));       
+	wattrset(g_help_win.wd, COLOR_PAIR(3));       
+	wattrset(g_info_win.wd, COLOR_PAIR(3));
+	wbkgd(g_users_list.wd, COLOR_PAIR(3)); 
+	wbkgd(g_help_win.wd, COLOR_PAIR(3)); 
+	wbkgd(g_info_win.wd, COLOR_PAIR(3)); 
 	cbreak();
 /*
         nodelay(stdscr,TRUE);
 	keypad(stdscr, FALSE);
 	meta(stdscr, FALSE);
 */
-	scrollok(main_win, TRUE);
+	scrollok(g_main_win, TRUE);
         noecho();
 	term_raw();
 }				
 
 void curses_end()
 {
-	werase(help_win.wd);
-	wrefresh(help_win.wd);
+	werase(g_help_win.wd);
+	wrefresh(g_help_win.wd);
 	endwin();
         curs_set(old_curs_vis);            /* enable cursor */
 }
@@ -166,21 +166,21 @@ int echo_line(struct window *w, char *s, int line)
 void print_help()
 {
 	int i = 0;
-	if(current == &proc_win) i = 1; 
-	echo_line(&help_win, help_line[i], 0);
-	wnoutrefresh(help_win.wd);
+	if (g_current == &g_proc_win) i = 1; 
+	echo_line(&g_help_win, help_line[i], 0);
+	wnoutrefresh(g_help_win.wd);
 }
 
 void update_load()
 {
 	double d[3] = { 0, 0, 0};
 	char buf[32];
-	if(info_win.cols < 65 || getloadavg(d, 3) == -1) return;
+	if(g_info_win.cols < 65 || getloadavg(d, 3) == -1) return;
 	snprintf(buf, sizeof buf, "load: %.2f, %.2f, %.2f", d[0], d[1], d[2]);
-	wmove(info_win.wd, 0, screen_cols - strlen(buf));
-	wattrset(info_win.wd, COLOR_PAIR(3));
-	waddstr(info_win.wd, buf);
-	wnoutrefresh(info_win.wd);
+	wmove(g_info_win.wd, 0, g_screen_cols - strlen(buf));
+	wattrset(g_info_win.wd, COLOR_PAIR(3));
+	waddstr(g_info_win.wd, buf);
+	wnoutrefresh(g_info_win.wd);
 }
 
 int inline scr_line(int l, struct window *w)

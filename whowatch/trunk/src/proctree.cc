@@ -84,7 +84,7 @@ static inline int get_pinfo(struct pinfo* i,DIR* d)
 static struct proc_t proc_special[2] = {{0},{1}};
 static struct proc_t *hash_table[HASHSIZE];
 static struct proc_t *main_list = 0;
-int num_proc = 1;
+static int num_proc = 1;
 
 static inline int hash_fun(int n)
 {

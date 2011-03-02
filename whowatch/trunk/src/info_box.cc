@@ -17,10 +17,11 @@ static char *title;		/* box title			*/
  */
 static void set_size(void)
 {
-	_box.size_x = screen_cols/5;
-	_box.size_y = screen_rows/3;
-	_box.cols = screen_cols - 2*_box.size_x;
-	_box.rows = screen_rows - 2*_box.size_y;
+	
+_box.size_x = g_screen_cols/5;
+	_box.size_y = g_screen_rows/3;
+	_box.cols = g_screen_cols - 2*_box.size_x;
+	_box.rows = g_screen_rows - 2*_box.size_y;
 }
 
 void info_refresh(void)
@@ -58,7 +59,7 @@ void info_resize(void)
 	box(_box.wd, ACS_VLINE, ACS_HLINE);
 	mesg_print();
 	info_refresh();
-	redrawwin(main_win);	
+	redrawwin(g_main_win);	
 }	
 	
 static void box_create(void)
@@ -90,7 +91,7 @@ int info_box_keys(int key)
 {
 	if(!_box.wd) return 0;
 	delwin(_box.wd);
-	redrawwin(main_win);
+	redrawwin(g_main_win);
 	_box.wd = 0;
 	return 1;
 }

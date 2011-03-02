@@ -18,10 +18,7 @@
 
 LIST_HEAD(users_l);
 static int wtmp_fd;
-static int toggle;	/* if 0 show cmd line else show idle time 	*/
-
-extern char *line_buf;		/* global buffer for line printing		*/
-extern int buf_size;		/* allocated buffer size			*/
+static bool toggle;	/* if 0 show cmd line else show idle time 	*/
 
 #ifdef HAVE_PROCESS_SYSCTL
 int get_login_pid(char *);
@@ -29,7 +26,7 @@ int get_login_pid(char *);
 
 struct prot_t
 {
-	char *s;
+	const char *s;
 	short port;
 	unsigned int nr;
 };
@@ -54,11 +51,10 @@ static struct prot_t prot_tab[] = {
  */
 void u_count(char *name, int p)
 {
-	int i;
 	struct prot_t *t;
-	users_list.d_lines += p;
-	dolog("%s : dlines %d\n", __FUNCTION__, users_list.d_lines);	
-	for(i = 0; i < sizeof prot_tab/sizeof(struct prot_t); i++){
+	g_users_list.d_lines += p;
+	dolog("%s : dlines %d\n", __FUNCTION__, g_users_list.d_lines);	
+	for (int i = 0; i < sizeof prot_tab/sizeof(struct prot_t); i++){
 		t = &prot_tab[i];
 		if(strncmp(t->s, name, strlen(t->s))) continue;
 		t->nr += p;
@@ -99,7 +95,7 @@ struct user_t *alloc_user(struct utmp *entry)
 		strncpy(u->parent, "can't access", sizeof u->parent);
 	else 	strncpy(u->parent, get_name(ppid), sizeof u->parent - 1);
 	
-	u->line = users_list.d_lines;
+	u->line = g_users_list.d_lines;
 	return u;
 }
 
@@ -111,16 +107,16 @@ static struct user_t* new_user(struct utmp *ut)
 	u_count(u->parent, LOGIN);
 	return u;
 }
-	
+
 static void print_user(struct user_t *u)
 {
-	wattrset(users_list.wd, A_BOLD);
-	snprintf(line_buf, buf_size, 
+	wattrset(g_users_list.wd, A_BOLD);
+	snprintf(g_line_buf, g_buf_size, 
 		"%-14.14s %-9.9s %-6.6s %-19.19s %s",
 		u->parent, u->name, u->tty, u->host, 
 		toggle?count_idle(u->tty):get_w(u->pid));
-	line_buf[buf_size - 1] = 0;
-	print_line(&users_list, line_buf , u->line, 0);
+	g_line_buf[g_buf_size - 1] = 0;
+	print_line(&g_users_list, g_line_buf , u->line, 0);
 }
 
 void users_list_refresh(void)
@@ -129,8 +125,8 @@ void users_list_refresh(void)
 	struct user_t *u;
 	list_for_each_r(tmp, &users_l) {
 		u = list_entry(tmp, struct user_t, head);
-		if(above(u->line, &users_list)) continue;
-		if(below(u->line, &users_list)) break;
+		if(above(u->line, &g_users_list)) continue;
+		if(below(u->line, &g_users_list)) break;
 		print_user(u);
 	}
 }
@@ -160,7 +156,7 @@ static void read_utmp(void)
 //		print_user(u);
 	}
 	close(fd);
-//	wnoutrefresh(users_list.wd);
+//	wnoutrefresh(g_users_list.wd);
 	return;
 }
 
@@ -172,7 +168,7 @@ struct user_t *cursor_user(void)
 {
 	struct user_t *u;
 	struct list_head *h;
-	int line = current->cursor + current->offset;
+	int line = g_current->cursor + g_current->offset;
 	list_for_each(h, &users_l) {
 		u = list_entry(h, struct user_t, head);
 		if(u->line == line) return u;
@@ -182,7 +178,7 @@ struct user_t *cursor_user(void)
 
 static void del_user(struct user_t *u)
 {
-	delete_line(&users_list, u->line);
+	delete_line(&g_users_list, u->line);
 	update_line(u->line);
 	u_count(u->parent, LOGOUT);
 	list_del(&u->head);
@@ -193,14 +189,14 @@ static void del_user(struct user_t *u)
 void print_info(void)
 {
         char buf[128];
-	int other = users_list.d_lines - prot_tab[LOCAL].nr - 
+	int other = g_users_list.d_lines - prot_tab[LOCAL].nr - 
 		prot_tab[TELNET].nr - prot_tab[SSH].nr;
-werase(info_win.wd);
+	werase(g_info_win.wd);
         snprintf(buf, sizeof buf - 1,
                 "\x1%d users: (%d local, %d telnet, %d ssh, %d other)",
-                users_list.d_lines, prot_tab[LOCAL].nr, prot_tab[TELNET].nr, prot_tab[SSH].nr, other);
-        echo_line(&info_win, buf, 0);
-        wnoutrefresh(info_win.wd);
+                g_users_list.d_lines, prot_tab[LOCAL].nr, prot_tab[TELNET].nr, prot_tab[SSH].nr, other);
+        echo_line(&g_info_win, buf, 0);
+        wnoutrefresh(g_info_win.wd);
 }
 
 /*
@@ -213,7 +209,7 @@ void check_wtmp(void)
 	struct utmp entry;
 	int i, show, changed;
 	show = changed = 0;
-	if(current == &users_list) show = 1;
+	if (g_current == &g_users_list) show = 1;
 	while((i = read(wtmp_fd, &entry, sizeof entry)) > 0){ 
 		if (i < sizeof entry){
 			curses_end();
@@ -256,28 +252,28 @@ char *users_list_giveline(int line)
 	list_for_each(h, &users_l) {
 		u = list_entry(h, struct user_t, head);
 		if (line != u->line) continue;
-		snprintf(line_buf, buf_size, 
+		snprintf(g_line_buf, g_buf_size, 
 			"%-14.14s %-9.9s %-6.6s %-19.19s %s", 
 			u->parent, u->name, u->tty, u->host, 
 				toggle?count_idle(u->tty):get_w(u->pid));
-		return line_buf;
+		return g_line_buf;
 	}
 	return "not available";
 }
 
 static void cmdline(void)
 {
-        struct window *q = &users_list;
+        struct window *q = &g_users_list;
         struct user_t *u;
         struct list_head *h;
-        int y, x;
 
-	if(CMD_COLUMN >= screen_cols) return;
+	if(CMD_COLUMN >= g_screen_cols) return;
         list_for_each(h, &users_l) {
+		int y, x;
                 u = list_entry(h, struct user_t, head);
-//                if(u->line < q->offset ||
-  //                      u->line > q->offset + q->rows - 1)
-		if(outside(u->line, q)) continue;
+//              if (u->line < q->offset ||
+//                  u->line > q->offset + q->rows - 1)
+		if (outside(u->line, q)) continue;
 		wmove(q->wd, u->line - q->offset, CMD_COLUMN);
                 cursor_off(q, q->cursor);
                 wattrset(q->wd, A_BOLD);
@@ -303,8 +299,8 @@ static int ulist_key(int key)
 		u = cursor_user();
 		if(u) pid = u->pid; 
         case 't':
-		werase(main_win);
-		current = &proc_win;
+		werase(g_main_win);
+		g_current = &g_proc_win;
 		print_help();
 		show_tree(pid);
 		tree_title(u);
@@ -312,7 +308,7 @@ static int ulist_key(int key)
 		pad_draw();
 		break;
         case 'i':
-                toggle ^= 1;
+                toggle = !toggle;
                 cmdline();
                 break;
         default: return 0;
@@ -333,10 +329,10 @@ void users_init(void)
         if(lseek(wtmp_fd, 0, SEEK_END) == -1)
                 errx(1, "%s: cannot seek in %s, %s",
 			__FUNCTION__, WTMP_FILE, strerror(errno));
-	users_list.giveme_line = users_list_giveline;
-	users_list.keys = ulist_key;
-	users_list.periodic = periodic;
-	users_list.redraw = users_list_refresh;
+	g_users_list.giveme_line = users_list_giveline;
+	g_users_list.keys = ulist_key;
+	g_users_list.periodic = periodic;
+	g_users_list.redraw = users_list_refresh;
 	read_utmp();
 	print_info();
 }

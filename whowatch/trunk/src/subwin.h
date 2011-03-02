@@ -2,13 +2,13 @@
 
 #define SUBWIN_COLS     64              /* virtual size of a subwindow      */
 #define SUBWIN_ROWS     128                                                                
-#define PAD_X           screen_cols/5   /* coordinates of upper left corner */             
-#define PAD_Y           screen_rows/4
+#define PAD_X           g_screen_cols/5   /* coordinates of upper left corner */             
+#define PAD_Y           g_screen_rows/4
 
-#define MARG_X		screen_cols/5		/* vertical margin		 */	
-#define MARG_Y		screen_rows/4		/* horizontal margin		 */
-#define LR_X		(screen_cols-MARG_X)	/* x coord of lower right corner */
-#define LR_Y		(screen_rows-MARG_Y)	/* y coord of lower right corner */
+#define MARG_X		g_screen_cols/5		/* vertical margin		 */	
+#define MARG_Y		g_screen_rows/4		/* horizontal margin		 */
+#define LR_X		(g_screen_cols-MARG_X)	/* x coord of lower right corner */
+#define LR_Y		(g_screen_rows-MARG_Y)	/* y coord of lower right corner */
 
 #define PAD_COLS	LR_X-MARG_X		/* number of visible columns	 */ 
 #define PAD_ROWS	LR_Y-MARG_Y		/* number of visible rows	 */
@@ -38,7 +38,10 @@ struct subwin {
 	void (*plugin_cleanup)(void);
 };
 
+// extern struct subwin g_sub_main;
+// extern struct g_sub_proc;
+// extern struct g_sub_user;
+// extern struct g_sub_signal;
+extern struct subwin *g_sub_current;
+extern struct pad_t *g_main_pad;
 
-extern struct subwin sub_main, sub_proc, sub_user, sub_signal;
-extern struct subwin *sub_current;
-extern struct pad_t *main_pad;
