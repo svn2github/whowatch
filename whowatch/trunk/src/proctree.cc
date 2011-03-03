@@ -3,6 +3,7 @@
  *  version: 20000511
  */
 
+#include <assert.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -24,21 +25,58 @@
 #define PROCDIR "/proc"
 #define HASHSIZE 128
 
-#define list_add(l,p,f) ({			\
-	(p)->f.nx = (l);			\
-	(p)->f.ppv = &(l);			\
-	if(l) (l)->f.ppv = &((p)->f.nx);	\
-	(l) = (p);				\
-})
+static void list_mlist_add (struct proc_t *&l, struct proc_t *p)
+{
+	p->mlist.nx = l;
+	p->mlist.ppv = &l;
+	if (l) l->mlist.ppv = &(p->mlist.nx);
+	l = p;
+}
 		
-#define list_del(p,f) ({				\
-	*(p)->f.ppv = (p)->f.nx;			\
-	if((p)->f.nx) (p)->f.nx->f.ppv = (p)->f.ppv;	\
-})
+static void list_broth_add (struct proc_t *&l, struct proc_t *p)
+{
+	p->broth.nx = l;
+	p->broth.ppv = &l;
+	if (l) l->broth.ppv = &(p->broth.nx);
+	l = p;
+}
+		
+static void list_hash_add (struct proc_t *&l, struct proc_t *p)
+{
+	p->hash.nx = l;
+	p->hash.ppv = &l;
+	if (l) l->hash.ppv = &(p->hash.nx);
+	l = p;
+}
 
-#define is_on_list(p,f) (!!(p)->f.ppv)
+static void list_mlist_del (struct proc_t *p)
+{
+	*p->mlist.ppv = p->mlist.nx;
+	if (p->mlist.nx) p->mlist.nx->mlist.ppv = p->mlist.ppv;
+}
 
-#define change_head(a,b,f) ({b=a; if(a) a->f.ppv=&b;})
+static void list_broth_del (struct proc_t *p)
+{
+	*p->broth.ppv = p->broth.nx;
+	if (p->broth.nx) p->broth.nx->broth.ppv = p->broth.ppv;
+}
+
+static void list_hash_del (struct proc_t *p)
+{
+	*p->hash.ppv = p->hash.nx;
+	if (p->hash.nx) p->hash.nx->hash.ppv = p->hash.ppv;
+}
+
+static bool is_on_list_broth (struct proc_t *p)
+{
+	return p->broth.ppv != 0;
+}
+
+static void change_head_mlist (struct proc_t *list, struct proc_t *old)
+{
+	old = list;
+	if (list) list->mlist.ppv = &old;
+}
 
 #ifdef HAVE_PROCESS_SYSCTL
 int get_all_info(struct kinfo_proc **);
@@ -104,26 +142,19 @@ struct proc_t* find_by_pid(int n)
 	return p;
 }
 
-static struct proc_t* cache = 0;
-
 static inline void remove_proc(struct proc_t* p)
 {
-	list_del(p,hash);
-	if(cache) free(cache);
-	cache = p;
+	list_hash_del (p);
 	num_proc--;
 }
 
 static inline struct proc_t* new_proc(int n)
 {
-	struct proc_t* p = cache;
-	cache = 0;
-	if(!p)
-		p = (struct proc_t*) malloc(sizeof *p);
+	struct proc_t* p = (struct proc_t*) malloc(sizeof *p);
 	memset(p,0,sizeof *p);
 	p->pid = n;
 
-	list_add(hash_table[hash_fun(n)], p, hash);
+	list_hash_add (hash_table[hash_fun(n)], p);
 	num_proc++;
 
 	return p;
@@ -137,18 +168,18 @@ static struct proc_t *validate_proc(int pid)
 	if(pid <= 1)
 		return p;
 	if(p)
-		list_del(p,mlist);
+		list_mlist_del (p);
 	else
 		p = new_proc(pid);
-	list_add(main_list,p,mlist);
+	list_mlist_add (main_list, p);
 	return p;
 }
 
 static inline void change_parent(struct proc_t* p,struct proc_t* q)
 {
-	if(is_on_list(p,broth))
-		list_del(p,broth);
-	list_add(q->child,p,broth);
+	if(is_on_list_broth (p))
+		list_broth_del (p);
+	list_broth_add (q->child, p);
 	p->parent = q;
 }
 
@@ -164,7 +195,7 @@ int update_tree(void del(void*))
 	struct proc_t *p,*q;
 	struct proc_t *old_list;
 	int n = num_proc;
-	change_head(main_list,old_list,mlist);
+	change_head_mlist (main_list, old_list);
 	main_list = 0;
 	
 #ifdef HAVE_PROCESS_SYSCTL
@@ -197,8 +228,8 @@ int update_tree(void del(void*))
 	for(p = old_list; p; p=q) {
 		while(p->child)
 			change_parent(p->child,&proc_init);
-		if(is_on_list(p,broth))
-			list_del(p,broth);
+		if(is_on_list_broth(p))
+			list_broth_del (p);
 		q = p->mlist.nx;
 		if(p->priv) del(p->priv);
 		remove_proc(p);

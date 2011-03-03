@@ -3,8 +3,9 @@
 #define TREE_STRING_SZ (2 + 2*TREE_DEPTH)
 
 struct plist {
-	struct proc_t* nx;
-	struct proc_t** ppv;
+	struct proc_t* nx;   // pointer to next element
+	struct proc_t** ppv; // pointer to next element pointer of the
+			     // previous element
 };
 
 struct proc_t {
