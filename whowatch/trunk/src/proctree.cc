@@ -25,14 +25,6 @@
 #define PROCDIR "/proc"
 #define HASHSIZE 128
 
-static void list_mlist_add (struct proc_t *&l, struct proc_t *p)
-{
-	p->mlist.nx = l;
-	p->mlist.ppv = &l;
-	if (l) l->mlist.ppv = &(p->mlist.nx);
-	l = p;
-}
-		
 static void list_broth_add (struct proc_t *&l, struct proc_t *p)
 {
 	p->broth.nx = l;
@@ -47,12 +39,6 @@ static void list_hash_add (struct proc_t *&l, struct proc_t *p)
 	p->hash.ppv = &l;
 	if (l) l->hash.ppv = &(p->hash.nx);
 	l = p;
-}
-
-static void list_mlist_del (struct proc_t *p)
-{
-	*p->mlist.ppv = p->mlist.nx;
-	if (p->mlist.nx) p->mlist.nx->mlist.ppv = p->mlist.ppv;
 }
 
 static void list_broth_del (struct proc_t *p)
@@ -70,12 +56,6 @@ static void list_hash_del (struct proc_t *p)
 static bool is_on_list_broth (struct proc_t *p)
 {
 	return p->broth.ppv != 0;
-}
-
-static void change_head_mlist (struct proc_t *list, struct proc_t *old)
-{
-	old = list;
-	if (list) list->mlist.ppv = &old;
 }
 
 #ifdef HAVE_PROCESS_SYSCTL
@@ -119,9 +99,9 @@ static inline int get_pinfo(struct pinfo* i,DIR* d)
 
 #define proc_zero (proc_special[0])
 #define proc_init (proc_special[1])
-static struct proc_t proc_special[2] = {{0},{1}};
+static struct proc_t proc_special[2] = { (0), (1) };
 static struct proc_t *hash_table[HASHSIZE];
-static struct proc_t *main_list = 0;
+static list_proc_t_mlist main_list;
 static int num_proc = 1;
 
 static inline int hash_fun(int n)
@@ -168,10 +148,10 @@ static struct proc_t *validate_proc(int pid)
 	if(pid <= 1)
 		return p;
 	if(p)
-		list_mlist_del (p);
+		main_list.erase(main_list.iterator_to(*p));
 	else
 		p = new_proc(pid);
-	list_mlist_add (main_list, p);
+	main_list.push_front(*p);
 	return p;
 }
 
@@ -192,25 +172,23 @@ int update_tree(void del(void*))
 	struct pinfo info;
 	DIR *d;
 #endif
-	struct proc_t *p,*q;
-	struct proc_t *old_list;
+	list_proc_t_mlist old_list;
 	int n = num_proc;
-	change_head_mlist (main_list, old_list);
-	main_list = 0;
+	main_list.swap(old_list);
 	
 #ifdef HAVE_PROCESS_SYSCTL
 	el = get_all_info(&pi);
 	for(i = 0; i < el; i++) {
-		p = validate_proc(pi[i].kp_proc.p_pid);
-		q = validate_proc(pi[i].kp_eproc.e_ppid);
+		struct proc_t *p = validate_proc(pi[i].kp_proc.p_pid);
+		struct proc_t *q = validate_proc(pi[i].kp_eproc.e_ppid);
 #else
 
 	d=opendir(PROCDIR);
 	if(d<0) return -1;
 
 	while( get_pinfo(&info,d) ) {
-		p = validate_proc(info.pid);
-		q = validate_proc(info.ppid);
+		struct proc_t *p = validate_proc(info.pid);
+		struct proc_t *q = validate_proc(info.ppid);
 #endif
 		if(p->parent != q){
 			if(p->priv) del(p->priv);
@@ -225,15 +203,18 @@ int update_tree(void del(void*))
 #endif
 	n = num_proc - n;
 
-	for(p = old_list; p; p=q) {
+	typedef list_proc_t_mlist::iterator I;
+	for (I p = old_list.begin(); p != old_list.end(); ) {
 		while(p->child)
 			change_parent(p->child,&proc_init);
-		if(is_on_list_broth(p))
-			list_broth_del (p);
-		q = p->mlist.nx;
-		if(p->priv) del(p->priv);
-		remove_proc(p);
+		if(is_on_list_broth(&*p))
+			list_broth_del (&*p);
+		I q = p;
+		q++;
+		if (p->priv) del(p->priv);
+		remove_proc(&*p);
 		n++;
+		p = q;
 	}
 
 	return n;
