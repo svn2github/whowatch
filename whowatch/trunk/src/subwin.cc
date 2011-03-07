@@ -10,12 +10,12 @@
 #include <dlfcn.h>
 
 static struct subwin sub_info;	/* doesn't support plugins, for static info */
-struct subwin sub_main;		/* contains functions for printing sysinfo  */
-struct subwin sub_proc;		/* selected process details		    */
-struct subwin sub_user;		/* selected user details		    */
-struct subwin sub_signal;	/* signal list - this one has an arrow	    */
+static struct subwin sub_main;	/* contains functions for printing sysinfo  */
+static struct subwin sub_proc;	/* selected process details		    */
+static struct subwin sub_user;	/* selected user details		    */
+static struct subwin sub_signal;/* signal list - this one has an arrow	    */
 struct subwin *g_sub_current; /* details currently displayed		    */
-struct pad_t *g_main_pad;		/* ncurses pad for printing details	    */
+struct pad_t *g_main_pad;	/* ncurses pad for printing details	    */
 static WINDOW *border_wd;	/* ncurses pad for printing frame	    */
 static char dlerr[128];		/* error returned by dlopen and dlsym	    */
 static int arrow_prev;		/* previous arrow position		    */

@@ -5,24 +5,13 @@
 
 #include <assert.h>
 #include <unistd.h>
-#include <fcntl.h>
 #include <stdio.h>
-#include <dirent.h>
-#include <stdlib.h>
-#include <ctype.h>
 #include <string.h>
+
 #include "config.h"
-
-
-#ifdef HAVE_PROCESS_SYSCTL
-#include <sys/param.h>
-#include <sys/sysctl.h>
-#include <sys/user.h>
-#endif
-
+#include "machine.h"
 #include "proctree.h"
 
-#define PROCDIR "/proc"
 #define HASHSIZE 128
 
 static void list_broth_add (struct proc_t *&l, struct proc_t *p)
@@ -57,45 +46,6 @@ static bool is_on_list_broth (struct proc_t *p)
 {
 	return p->broth.ppv != 0;
 }
-
-#ifdef HAVE_PROCESS_SYSCTL
-int get_all_info(struct kinfo_proc **);
-#endif 
-
-struct pinfo {
-	int pid;
-	int ppid;
-};
-
-#ifndef HAVE_PROCESS_SYSCTL
-static inline int get_pinfo(struct pinfo* i,DIR* d)
-{
-	static char name[32] = PROCDIR "/";
-	struct dirent* e;
-
-	for(;;) {
-		int f,n;
-		char buf[64],*p;
-
-		e=readdir(d);
-		if(!e) return 0;
-		if(!isdigit(e->d_name[0])) continue;
-		sprintf(name+sizeof PROCDIR,"%s/stat",e->d_name);
-		f=open(name,0);
-		if(!f) continue;
-		n=read(f,buf,63);
-		close(f);
-		if(n<0) continue;
-		buf[n]=0;
-		p = strrchr(buf+4,')') + 4;
-		i->ppid = atoi(p);
-		i->pid = atoi(buf);
-		if(i->pid<=0) continue;
-		break;
-	}
-	return 1;
-}
-#endif
 
 #define proc_zero (proc_special[0])
 #define proc_init (proc_special[1])
@@ -163,44 +113,25 @@ static inline void change_parent(struct proc_t* p,struct proc_t* q)
 	p->parent = q;
 }
 
-int update_tree(void del(void*))
+int update_tree (void del(void*))
 {
-#ifdef HAVE_PROCESS_SYSCTL
-	struct kinfo_proc *pi;
-	int i, el;
-#else
-	struct pinfo info;
-	DIR *d;
-#endif
 	list_proc_t_mlist old_list;
 	int n = num_proc;
 	main_list.swap(old_list);
 	
-#ifdef HAVE_PROCESS_SYSCTL
-	el = get_all_info(&pi);
-	for(i = 0; i < el; i++) {
-		struct proc_t *p = validate_proc(pi[i].kp_proc.p_pid);
-		struct proc_t *q = validate_proc(pi[i].kp_eproc.e_ppid);
-#else
+	if (!update_proc_all())
+		return -1;
 
-	d=opendir(PROCDIR);
-	if(d<0) return -1;
+	for (int i = 0; i < proc_numbers(); i++) {
+	  struct proc_t *p = validate_proc(proc_pid(i));
+	  struct proc_t *q = validate_proc(proc_ppid(i));
 
-	while( get_pinfo(&info,d) ) {
-		struct proc_t *p = validate_proc(info.pid);
-		struct proc_t *q = validate_proc(info.ppid);
-#endif
-		if(p->parent != q){
-			if(p->priv) del(p->priv);
-
-			change_parent(p,q);
-		}
+	  if (p->parent != q) {
+		  if (p->priv) del(p->priv);
+		  change_parent(p,q);
+	  }
 	}
-#ifdef HAVE_PROCESS_SYSCTL
-	free(pi);
-#else
-	closedir(d);
-#endif
+
 	n = num_proc - n;
 
 	typedef list_proc_t_mlist::iterator I;

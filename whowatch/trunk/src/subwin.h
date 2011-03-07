@@ -38,10 +38,6 @@ struct subwin {
 	void (*plugin_cleanup)(void);
 };
 
-// extern struct subwin g_sub_main;
-// extern struct g_sub_proc;
-// extern struct g_sub_user;
-// extern struct g_sub_signal;
 extern struct subwin *g_sub_current;
 extern struct pad_t *g_main_pad;
 
