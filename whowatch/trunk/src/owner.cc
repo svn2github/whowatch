@@ -1,7 +1,9 @@
 /*
  * Functions needed for printing process owner in the tree.
  */
-#include <pwd.h>
+
+#include "config.h"
+#include "machine.h"
 #include "whowatch.h"
 
 #define HASHSIZE 32
@@ -38,21 +40,22 @@ static inline struct owner* find_by_uid(int n)
 	return p;
 }
 
-static inline struct owner* new_owner(int n)
+static inline struct owner* new_owner (int uid)
 {
 	struct owner* p;
-	struct passwd *u;
 	p = (struct owner*) malloc(sizeof *p);
 	if (!p) allocate_error();
 	memset(p, 0, sizeof *p);
-	u = getpwuid(n);
-	if (!u) sprintf(p->name, "%d", n);
-	else {
-		strncpy(p->name, u->pw_name, NAME_SIZE);
-		p->name[NAME_SIZE] = 0;
+	std::string name;
+	if (!uid_to_name(uid, name)) {
+	  sprintf(p->name, "%d", uid);
 	}
-	p->uid = n;
-	list_add(hash_table[hash_fun(n)], p);
+	else {
+	  strncpy(p->name, name.c_str(), NAME_SIZE);
+	  p->name[NAME_SIZE] = '\0';
+	}
+	p->uid = uid;
+	list_add(hash_table[hash_fun(uid)], p);
 	return p;
 }
 
