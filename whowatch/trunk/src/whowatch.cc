@@ -289,7 +289,7 @@ int main (int argc, char **argv)
 			key_action(key);
 		}
 		if(tv.tv_sec <= 0) {
-			ticks++;
+			g_ticks++;
 			periodic();
 			tv.tv_sec = TIMEOUT;
 

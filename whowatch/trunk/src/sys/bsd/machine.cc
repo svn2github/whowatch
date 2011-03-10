@@ -1,12 +1,15 @@
 #include <vector>
 
+#include "config.h"
+#include "machine.h"
+
 #ifdef HAVE_PROCESS_SYSCTL
 #include <sys/param.h>
 #include <sys/sysctl.h>
 #include <sys/user.h>
 #endif
 
-#include "machine.h"
+
 
 static std::vector<struct kinfo_proc> g_proc_infos;
 
@@ -16,7 +19,8 @@ static std::vector<struct kinfo_proc> g_proc_infos;
 bool update_proc_all ()
 {
 	int mib[3] = { CTL_KERN, KERN_PROC, KERN_PROC_ALL };
-	int len, el;
+	int el;
+	size_t len;
 
 	if (sysctl(mib, 3, 0, &len, 0, 0) == -1)
 	  return false;
@@ -34,10 +38,10 @@ int proc_numbers ()
 
 int proc_pid (int i)
 {
-        return g_proc_infos[i].kp_proc.p_pid;
+        return g_proc_infos[i].ki_pid;
 }
 
 int proc_ppid (int i)
 {
-        return g_proc_infos[i].kp_eproc.e_ppid;
+        return g_proc_infos[i].ki_ppid;
 }

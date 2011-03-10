@@ -59,15 +59,15 @@ static inline int hash_fun(int n)
 	return n&(HASHSIZE-1);
 }
 
-struct proc_t* find_by_pid(int n)
+struct proc_t* find_by_pid (int pid)
 {
 	struct proc_t* p;
-	if(n<=1) return &proc_special[n];
+	if (pid <= 1) return &proc_special[pid];
 
-	p = hash_table[hash_fun(n)];
+	p = hash_table[hash_fun(pid)];
 	while(p) {
-		if(p->pid == n) break;
-		p=p->hash.nx;
+		if (p->pid == pid) break;
+		p = p->hash.nx;
 	}
 	return p;
 }
@@ -78,19 +78,19 @@ static inline void remove_proc(struct proc_t* p)
 	num_proc--;
 }
 
-static inline struct proc_t* new_proc(int n)
+static inline struct proc_t* new_proc (int pid)
 {
 	struct proc_t* p = (struct proc_t*) malloc(sizeof *p);
 	memset(p,0,sizeof *p);
-	p->pid = n;
+	p->pid = pid;
 
-	list_hash_add (hash_table[hash_fun(n)], p);
+	list_hash_add (hash_table[hash_fun(pid)], p);
 	num_proc++;
 
 	return p;
 }
 
-static struct proc_t *validate_proc(int pid)
+static struct proc_t *validate_proc (int pid)
 {
 	struct proc_t* p;
 
@@ -105,7 +105,7 @@ static struct proc_t *validate_proc(int pid)
 	return p;
 }
 
-static inline void change_parent(struct proc_t* p,struct proc_t* q)
+static inline void change_parent(struct proc_t* p, struct proc_t* q)
 {
 	if(is_on_list_broth (p))
 		list_broth_del (p);
@@ -136,7 +136,7 @@ int update_tree (void del(void*))
 
 	typedef list_proc_t_mlist::iterator I;
 	for (I p = old_list.begin(); p != old_list.end(); ) {
-		while(p->child)
+	        while (p->child)
 			change_parent(p->child,&proc_init);
 		if(is_on_list_broth(&*p))
 			list_broth_del (&*p);

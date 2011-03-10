@@ -35,8 +35,8 @@ struct procinfo
 int fill_kinfo(struct kinfo_proc *info, int pid)
 {
 	int mib[] = { CTL_KERN, KERN_PROC, KERN_PROC_PID, pid };
-	int len = sizeof *info;
-	if(sysctl(mib, 4, info, &len, 0, 0) == -1) 
+	size_t len = sizeof *info;
+	if (sysctl(mib, 4, info, &len, 0, 0) == -1) 
 		return -1;
 	return len?0:-1;
 }
@@ -53,12 +53,12 @@ void get_info(int pid, struct procinfo *p)
 	
 	if(fill_kinfo(&info, pid) == -1) return;
 	
-    	p->ppid = info.kp_eproc.e_ppid;
-    	p->tpgid = info.kp_eproc.e_tpgid;
-    	p->euid = info.kp_eproc.e_pcred.p_svuid;
-    	p->stat = info.kp_proc.p_stat;
-    	strncpy(p->exec_file, info.kp_proc.p_comm, EXEC_FILE);
-    	p->cterm = info.kp_eproc.e_tdev;
+    	p->ppid = info.ki_ppid;
+    	p->tpgid = info.ki_tpgid;
+    	p->euid = info.ki_svuid;
+    	p->stat = info.ki_stat;
+    	strncpy(p->exec_file, info.ki_comm, EXEC_FILE);
+    	p->cterm = info.ki_tdev;
 	p->exec_file[EXEC_FILE] = '\0';
 }
 
@@ -92,7 +92,8 @@ int get_term(char *tty)
 int get_login_pid(char *tty)
 {
 	int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_TTY, 0};
-	int len, t, el, i, pid, cndt = -1, l;
+	int t, el, i, pid, cndt = -1, l;
+	size_t len;
 	struct kinfo_proc *info;
 	struct procinfo p;
 	
@@ -104,24 +105,24 @@ int get_login_pid(char *tty)
 	mib[3] = t;
 	if(sysctl(mib, 4, 0, &len, 0, 0) == -1)
 		return -1;
-	info = calloc(1, len);
+	info = (kinfo_proc*)calloc(1, len);
 	if(!info) return -1;
 	el = len/sizeof(struct kinfo_proc);
 	if(sysctl(mib, 4, info, &len, 0, 0) == -1)
 		return -1;
 	for(i = 0; i < el; i++) {
-		if(!(pid = info[i].kp_proc.p_pid)) continue;
+		if(!(pid = info[i].ki_pid)) continue;
 		get_info(get_ppid(pid), &p);
 		if(p.cterm == -1 || p.cterm != t) {
 			cndt = pid;
-			l = strlen(info[i].kp_proc.p_comm);
+			l = strlen(info[i].ki_comm);
 			/*
 			 * This is our best match: parent of the process
 			 * doesn't have controlling terminal and process'
 			 * name ends with "sh"
 			 *
 			 */
-			if(l > 1 && !strncmp("sh",info[i].kp_proc.p_comm+l-2,2)) {
+			if(l > 1 && !strncmp("sh",info[i].ki_comm+l-2,2)) {
 				free(info);
 				return pid;
 			}
@@ -153,8 +154,8 @@ char *get_cmdline(int pid)
 	bzero(buf, sizeof buf);
 	if(fill_kinfo(&info, pid) == -1)
 		return "-";
-	memcpy(buf, info.kp_proc.p_comm, sizeof buf - 1);
-	if(!full_cmd) return buf;
+	memcpy(buf, info.ki_comm, sizeof buf - 1);
+	if(!g_full_cmd) return buf;
 #ifdef HAVE_LIBKVM
 	if(!can_use_kvm) return buf;
 	p = kvm_getargv(kd, &info, 0);

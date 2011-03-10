@@ -1,5 +1,5 @@
-#include "whowatch.h"
 #include "config.h"
+#include "whowatch.h"
 
 #ifndef UTMP_FILE
 #define UTMP_FILE 	"/var/run/utmp"
@@ -147,7 +147,7 @@ static void read_utmp(void)
 	}
 	while((i = read(fd, &entry,sizeof entry)) > 0) {
 		if(i != sizeof entry) errx(1, "Error reading " UTMP_FILE );
-#ifdef HAVE_DECL_USER_PROCESS
+#if defined HAVE_DECL_USER_PROCESS && HAVE_DECL_USER_PROCESS
 		if(entry.ut_type != USER_PROCESS) continue;
 #else
 		if(!entry.ut_name[0]) continue;
@@ -216,7 +216,7 @@ void check_wtmp(void)
 			errx(1, "%s: error reading %s", __FUNCTION__, WTMP_FILE );
 		}
 		/* user just logged in */
-#ifdef HAVE_DECL_USER_PROCESS
+#if defined HAVE_DECL_USER_PROCESS && HAVE_DECL_USER_PROCESS
 		if(entry.ut_type == USER_PROCESS) {
 #else
 		if(entry.ut_user[0]) {
@@ -225,7 +225,7 @@ void check_wtmp(void)
 			changed = 1;
 			continue;
 		}
-#ifdef HAVE_DECL_DEAD_PROCESS
+#if defined HAVE_DECL_DEAD_PROCESS && HAVE_DECL_DEAD_PROCESS
 		if(entry.ut_type != DEAD_PROCESS) continue;
 #else
 //		if(entry.ut_line[0]) continue;

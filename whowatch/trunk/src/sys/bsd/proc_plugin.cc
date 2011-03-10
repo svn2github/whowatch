@@ -126,7 +126,7 @@ static struct netconn_t *tcp_find(unsigned int inode, struct list_head *head)
 static struct netconn_t *new_netconn(unsigned int inode, struct netconn_t *src)
 {
 	struct netconn_t *t = 0;
-	t = get_empty(sizeof *t, &tcp_blocks);
+	t = (struct netconn_t*)get_empty(sizeof *t, &tcp_blocks);
 	memcpy(t, src, sizeof *t);
 //	t->used = 1;
 	t->inode = inode;
@@ -244,11 +244,9 @@ void open_fds(int pid, char *name)
 		no_info();
 		return;
 	}
-	if(!count || ticks - count >= 2) {
-//write(1, "\a", 1);	
-//dolog(__FUNCTION__ " reading tcp conn %d %d\n", ticks, ticks%2);	
+	if(!count || g_ticks - count >= 2) {
 	read_tcp_conn();
-	count = ticks;
+	count = g_ticks;
 
 	}	
 	while((dn = readdir(d))) {
@@ -330,33 +328,6 @@ static void read_meminfo(int pid, char *name)
 	read_proc_file(buf, "Uid", "VmLib");
 }
 
-#define START_TIME_POS	21
-/*
- * Returns time the process  
- * started (in jiffies) after system boot.
- */
-static unsigned long p_start_time(int pid)
-{
-	char buf[32];
-	FILE *f;
-	int i;
-	unsigned long  c = 0;
-	snprintf(buf, sizeof buf, "/proc/%d/stat", pid);
-	f = fopen(buf, "r");
-	if(!f) return -1;
-	while((i = fgetc(f)) != EOF) {
-		if(i == ' ') c++;
-		if(c == START_TIME_POS) goto FOUND;
-	}
-	fclose(f);
-	return -1;
-FOUND:
-	i = fscanf(f, "%ld", &c);
-	fclose(f);
-	if(i != 1) return -1;
-	return c;
-}		
-
 static time_t boot_time;
 
 void get_boot_time(void)
@@ -381,20 +352,9 @@ FOUND:
 	boot_time = (time_t) c;
 }		
 
-#include <asm/param.h>	// for HZ
-
 static void proc_starttime(int pid, char *name)
 {
-	unsigned long i, sec;
-	char *s;
-	i = p_start_time(pid);
-	if(i == -1 || !boot_time) {
-		no_info();
-		return;
-	}
-	sec = boot_time + i/HZ;
-	s = ctime(&sec);
-	print("%s", s);
+	no_info();
 }
 
 struct proc_detail_t {

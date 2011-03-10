@@ -59,7 +59,7 @@ static struct _block_tbl_t *new_block(int size, struct list_head *h)
 void *get_empty(int size, struct list_head *h)
 {
 	int i;
-int nr = 0;
+	int nr = 0;
 	struct _block_tbl_t *tmp;
 	struct list_head *t;
 	list_for_each(t, h) {
@@ -76,7 +76,7 @@ nr++;
 FOUND:
 	dolog("%s: empty in %d block at %d pos\n", __FUNCTION__, nr, i);
 	tmp->map |= 1<<i;
-	return tmp->_block_t + (size * i);
+	return (char*)tmp->_block_t + (size * i);
 }
 
 #if 0
@@ -114,7 +114,7 @@ int free_entry(void *p, int size, struct list_head *h)
 int i = 0;
 	list_for_each(t, h) {
 		tmp = list_entry(t, struct _block_tbl_t, head);
-		if(p >= tmp->_block_t && p < (tmp->_block_t + size * TBL_SIZE))
+		if(p >= tmp->_block_t && p < ((char*)tmp->_block_t + size * TBL_SIZE))
 			goto FOUND;
 		i++;
 	}

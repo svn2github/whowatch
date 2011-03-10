@@ -28,7 +28,9 @@ if test "$CURS" != "1"; then
 fi
 AC_CHECK_LIB(dl, dlopen, [LIBS="$LIBS -ldl"])
 
-AX_BOOST_BASE([1.42.0], ,
+AX_BOOST_BASE([1.42.0],
+ CXXFLAGS="$CXXFLAGS $BOOST_CPPFLAGS"
+ LDFLAGS="$LDFLAGS $BOOST_LDFLAGS",
  AC_MSG_ERROR([Couldn't find boost libraries]))
 
 # Checks for header files.
