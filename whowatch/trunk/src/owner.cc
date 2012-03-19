@@ -2,67 +2,29 @@
  * Functions needed for printing process owner in the tree.
  */
 
+#include <string>
+#include <boost/unordered_map.hpp>
+
 #include "config.h"
 #include "machine.h"
 #include "whowatch.h"
 
-#define HASHSIZE 32
-#define NAME_SIZE	8
+typedef boost::unordered_map<int, std::string> hash_table;
+static hash_table g_uid_name_map;
 
-#define list_add(l,p) ({			\
-	(p)->next = (l);			\
-	(l) = (p);				\
-})
-
-struct owner{
-	char name[NAME_SIZE + 1];
-	int uid;
-	struct owner *next;
-};
-
-/* remember each resolved uid->name in the hash table to save CPU time */
-static struct owner *hash_table[HASHSIZE];
-
-static inline int hash_fun(int n)
+std::string get_owner_name (int uid)
 {
-	return n&(HASHSIZE-1);
-}
+	hash_table::iterator i;
 
-static inline struct owner* find_by_uid(int n)
-{
-	struct owner* p;
-
-	p = hash_table[hash_fun(n)];
-	while(p) {
-		if(p->uid == n) break;
-		p=p->next;
+	i = g_uid_name_map.find (uid);
+	if (i != g_uid_name_map.end()) {
+		return i->second;
 	}
-	return p;
-}
 
-static inline struct owner* new_owner (int uid)
-{
-	struct owner* p;
-	p = (struct owner*) malloc(sizeof *p);
-	if (!p) allocate_error();
-	memset(p, 0, sizeof *p);
 	std::string name;
-	if (!uid_to_name(uid, name)) {
-	  sprintf(p->name, "%d", uid);
+	if (!uid_to_name (uid, name)) {
+		name = int_to_string (uid);
 	}
-	else {
-	  strncpy(p->name, name.c_str(), NAME_SIZE);
-	  p->name[NAME_SIZE] = '\0';
-	}
-	p->uid = uid;
-	list_add(hash_table[hash_fun(uid)], p);
-	return p;
-}
-
-char *get_owner_name(int u)
-{
-	struct owner *p;
-	p = find_by_uid(u);
-	if (!p) p = new_owner(u);
-	return p->name;
+	g_uid_name_map[uid] = name;
+	return name;
 }

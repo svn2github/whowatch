@@ -1,3 +1,5 @@
+// -*-c++-*-
+#include <string>
 #include <stdio.h>
 #include <errno.h>
 #include <err.h>
@@ -99,6 +101,7 @@ void users_list_refresh();
 void allocate_error();
 void prg_exit(char *);
 void send_signal(int, pid_t);
+std::string int_to_string (int x);
 
 /* process.c */
 void show_tree(pid_t);
@@ -152,11 +155,10 @@ void sys_info(int);
 void get_boot_time(void);
 
 /* owner.c */
-char *get_owner_name(int u);
+std::string get_owner_name (int uid);
 
 /* block.c */
 void *get_empty(int, struct list_head *);
-int free_entry(void *, int, struct list_head *);
 void dolog(const char *, ...);
 
 /* subwin.c */
@@ -206,7 +208,6 @@ int reg_match(const char *);
 void set_search(char *);
 
 /* kbd.c */
-int getkey();
 int read_key ();
 
 /* term.c */

@@ -1,3 +1,4 @@
+#include <sstream>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -297,4 +298,11 @@ int main (int argc, char **argv)
 #endif
 		if (size_changed) resize();
 	}
+}
+
+std::string int_to_string (int x)
+{
+  std::ostringstream os;
+  os << x;
+  return os.str();
 }

@@ -285,7 +285,7 @@ static int incomplete()
 	return ordkey(p[-1]);
 }
 
-int getkey()
+static int getkey()
 {
 	int v, c;
 

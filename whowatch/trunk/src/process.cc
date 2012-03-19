@@ -125,16 +125,17 @@ static char *prepare_line(struct process *p)
 	if (!p) return 0;
 	tree = tree_string(tree_root, p->proc);
 	get_state(p);
-	if(show_owner) 
-		snprintf(g_line_buf, g_buf_size,"\x3%5d %c%c \x3%-8s \x2%s \x3%s", 
-			p->proc->pid, get_state_color(p->state), 
-			p->state, get_owner_name(p->uid), tree, 
-			get_cmdline(p->proc->pid));
-	else 
+	if (show_owner) {
+	  snprintf (g_line_buf, g_buf_size,"\x3%5d %c%c \x3%-8s \x2%s \x3%s", 
+		   p->proc->pid, get_state_color(p->state), 
+		    p->state, get_owner_name(p->uid).c_str(), tree, 
+		    get_cmdline(p->proc->pid));
+	}
+	else {
 		snprintf(g_line_buf, g_buf_size,"\x3%5d %c%c \x2%s \x3%s", 
 			p->proc->pid, get_state_color(p->state), 
 			p->state, tree, get_cmdline(p->proc->pid));
-		
+	}	
 	return g_line_buf;
 }
 
@@ -181,7 +182,7 @@ unsigned int getprocbyname(int l)
 		snprintf(buf, sizeof buf, "%d", p->proc->pid);
 		if(reg_match(buf)) return p->line;
 		/* next process owner */
-		if(show_owner && reg_match(get_owner_name(p->uid))) 
+		if(show_owner && reg_match(get_owner_name(p->uid).c_str())) 
 			return p->line;
 		tmp = get_cmdline(p->proc->pid);
 		if(reg_match(tmp)) return p->line;

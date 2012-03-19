@@ -80,8 +80,7 @@ static inline void remove_proc(struct proc_t* p)
 
 static inline struct proc_t* new_proc (int pid)
 {
-	struct proc_t* p = (struct proc_t*) malloc(sizeof *p);
-	memset(p,0,sizeof *p);
+	struct proc_t* p = (struct proc_t*) calloc(sizeof *p, 1);
 	p->pid = pid;
 
 	list_hash_add (hash_table[hash_fun(pid)], p);

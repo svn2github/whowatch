@@ -13,7 +13,7 @@
 static FILE *logfile;
 static int nr_blocks;
 
-void dolog(const char *t, ...)
+void dolog (const char *t, ...)
 {
         va_list ap;
         char *c;
@@ -78,53 +78,3 @@ FOUND:
 	tmp->map |= 1<<i;
 	return (char*)tmp->_block_t + (size * i);
 }
-
-#if 0
-/* dead code */
-/*
- * Free all unused blocks of memory (map == 0)
- */
-static void rm_free_blocks(struct list_head *head)
-{
-	struct _block_tbl_t *tmp;
-	struct list_head *t, *p;
-	t = head->next;
-	dolog("%s: entering\n", __FUNCTION__);
-	while(t != head) {
-		tmp = list_entry(t, struct _block_tbl_t, head);
-		p = t->next;
-		if(!tmp->map) {
-			dolog("%s: empty block found %p\n", __FUNCTION__, tmp);
-			free(tmp->_block_t);
-			list_del(&tmp->head);
-			free(tmp);
-		}
-		t = p;
-	}
-}
-#endif
-
-/*
- * Find entry pointed by p and mark it unused.
- */
-int free_entry(void *p, int size, struct list_head *h)
-{
-	struct _block_tbl_t *tmp;
-	struct list_head *t;
-int i = 0;
-	list_for_each(t, h) {
-		tmp = list_entry(t, struct _block_tbl_t, head);
-		if(p >= tmp->_block_t && p < ((char*)tmp->_block_t + size * TBL_SIZE))
-			goto FOUND;
-		i++;
-	}
-	dolog("%s: entry not found - error\n", __FUNCTION__);
-	return -1;
-FOUND:
-	dolog("%s: %p pointer found in %d\n", __FUNCTION__, p, i);
-	tmp->map &= ~(1<<((char*)p - (char*)tmp->_block_t)/size);
-	dolog("%s: setting map pos %d to zero, map = %x\n",
-	      __FUNCTION__, ((char*)p - (char*)tmp->_block_t)/size, tmp->map);
-	return 0;
-}		 	
-
