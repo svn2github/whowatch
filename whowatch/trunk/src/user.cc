@@ -1,6 +1,9 @@
 #include "config.h"
 #include "whowatch.h"
 
+#include <list>
+#include <boost/foreach.hpp>
+
 #ifndef UTMP_FILE
 #define UTMP_FILE 	"/var/run/utmp"
 #endif
@@ -16,7 +19,7 @@
 #define ut_user ut_name
 #endif
 
-LIST_HEAD(users_l);
+static std::list<user_t*> users_l;
 static int wtmp_fd;
 static bool toggle;	/* if 0 show cmd line else show idle time 	*/
 
@@ -64,20 +67,18 @@ void u_count(char *name, int p)
 /*
  * After deleting line, update line numbers in each user structure 
  */
-void update_line(int line)
+void update_line (int line)
 {
-	struct user_t *u;
-	struct list_head *tmp;
-	list_for_each(tmp, &users_l) {
-		u = list_entry(tmp, struct user_t, head); 
-		if(u->line > line) u->line--;
+	BOOST_FOREACH (user_t *u, users_l)
+	{
+		if (u->line > line) u->line--;
 	}	
 }
 			
 /* 
  * Create new user structure and fill it
  */
-struct user_t *alloc_user(struct utmp *entry)
+struct user_t *alloc_user (struct utmp *entry)
 {
 	struct user_t *u;
 	int ppid;
@@ -103,7 +104,7 @@ static struct user_t* new_user(struct utmp *ut)
 {
 	struct user_t *u;
 	u = alloc_user(ut);
-	list_add(&u->head, &users_l);
+	users_l.push_front (u);
 	u_count(u->parent, LOGIN);
 	return u;
 }
@@ -121,10 +122,8 @@ static void print_user(struct user_t *u)
 
 void users_list_refresh(void)
 {
-	struct list_head *tmp;
-	struct user_t *u;
-	list_for_each_r(tmp, &users_l) {
-		u = list_entry(tmp, struct user_t, head);
+	BOOST_FOREACH (user_t *u, users_l)
+	{
 		if(above(u->line, &g_users_list)) continue;
 		if(below(u->line, &g_users_list)) break;
 		print_user(u);
@@ -166,25 +165,13 @@ static void read_utmp(void)
  */
 struct user_t *cursor_user(void)	
 {
-	struct user_t *u;
-	struct list_head *h;
 	int line = g_current->cursor + g_current->offset;
-	list_for_each(h, &users_l) {
-		u = list_entry(h, struct user_t, head);
-		if(u->line == line) return u;
+	BOOST_FOREACH (user_t *u, users_l)
+	{
+		if (u->line == line) return u;
 	}
 	return 0;
 }
-
-static void del_user(struct user_t *u)
-{
-	delete_line(&g_users_list, u->line);
-	update_line(u->line);
-	u_count(u->parent, LOGOUT);
-	list_del(&u->head);
-	free(u);
-}
-
 
 void print_info(void)
 {
@@ -231,11 +218,20 @@ void check_wtmp(void)
 //		if(entry.ut_line[0]) continue;
 #endif
 	/* user just logged out */
-		list_for_each(h, &users_l) {
-			u = list_entry(h, struct user_t, head);
-			if(strncmp(u->tty, entry.ut_line, UT_LINESIZE)) 
+		for (std::list<user_t*>::iterator i = users_l.begin();
+		     i != users_l.end();
+		     i++)
+		{
+			user_t *u = *i;
+			if (strncmp(u->tty, entry.ut_line, UT_LINESIZE)) 
 				continue;
-			del_user(u);	
+
+			delete_line(&g_users_list, u->line);
+			update_line(u->line);
+			u_count(u->parent, LOGOUT);
+			users_l.erase (i);
+			free(u);
+
 			changed = 1;
 			break;
 		}
@@ -247,10 +243,8 @@ void check_wtmp(void)
 
 char *users_list_giveline(int line)
 {
-	struct user_t *u;
-	struct list_head *h;	
-	list_for_each(h, &users_l) {
-		u = list_entry(h, struct user_t, head);
+	BOOST_FOREACH (user_t *u, users_l)
+	{
 		if (line != u->line) continue;
 		snprintf(g_line_buf, g_buf_size, 
 			"%-14.14s %-9.9s %-6.6s %-19.19s %s", 
@@ -264,13 +258,11 @@ char *users_list_giveline(int line)
 static void cmdline(void)
 {
         struct window *q = &g_users_list;
-        struct user_t *u;
-        struct list_head *h;
 
 	if(CMD_COLUMN >= g_screen_cols) return;
-        list_for_each(h, &users_l) {
+	BOOST_FOREACH (user_t *u, users_l)
+	{
 		int y, x;
-                u = list_entry(h, struct user_t, head);
 //              if (u->line < q->offset ||
 //                  u->line > q->offset + q->rows - 1)
 		if (outside(u->line, q)) continue;
@@ -343,11 +335,8 @@ void users_init(void)
  */
 unsigned int user_search(int line)
 {
-	struct user_t *u;
-	struct list_head *h;
-	
-	list_for_each(h, &users_l) {
-		u = list_entry(h, struct user_t, head);
+	BOOST_FOREACH (user_t *u, users_l)
+	{	
 		if(u->line < line) continue;
 		if(reg_match(u->parent)) return u->line;
 		if(reg_match(u->name)) return u->line;
@@ -358,5 +347,3 @@ unsigned int user_search(int line)
 	}
 	return -1;
 }
-
-

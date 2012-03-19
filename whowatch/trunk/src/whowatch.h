@@ -63,7 +63,6 @@ struct window
 
 struct user_t
 {
-        struct list_head head;
         char name[UT_NAMESIZE + 1];     /* login name                   */
         char tty[UT_LINESIZE + 1];      /* tty                          */
         int pid;                        /* pid of login shell           */
