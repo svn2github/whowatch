@@ -9,7 +9,7 @@
 
 static char in[MAX_INPUT];	/* buffer for a input string 		*/
 static int pos;			/* current cursor position 		*/
-static void (*call_back)(char *in);
+void (*call_back)(char *in);
 static unsigned short offset;
 static struct pad_t _box, _in;
 static char *descr, *title;
@@ -21,15 +21,15 @@ static short cur_button;
  */
 static void set_size(void)
 {
-	_box.size_x = g_screen_cols/5;
-	_box.size_y = g_screen_rows/3;
-	_box.cols = g_screen_cols - 2*_box.size_x;
-	_box.rows = g_screen_rows - 2*_box.size_y;
+	_box.size_x = screen_cols/5;
+	_box.size_y = screen_rows/3;
+	_box.cols = screen_cols - 2*_box.size_x;
+	_box.rows = screen_rows - 2*_box.size_y;
 }
 
 static void in_set_size(int l)
 {
-	_in.cols = g_screen_cols - 2*_box.size_x - 3;
+	_in.cols = screen_cols - 2*_box.size_x - 3;
 	_in.size_x = _box.size_x + l + 1;
 	_in.size_y =  _box.size_y + _box.size_y/2 - 1;
 }
@@ -102,7 +102,7 @@ void box_resize(void)
 	box(_box.wd, ACS_VLINE, ACS_HLINE);
 	title_print();
 	fill_input(in);
-	redrawwin(g_main_win);	
+	redrawwin(main_win);	
 	box_refresh();
 }	
 
@@ -154,7 +154,7 @@ static void in_keys(int key)
 	case KBD_ESC:
 		delwin(_box.wd);
 		delwin(_in.wd);
-		redrawwin(g_main_win);
+		redrawwin(main_win);
 		_box.wd = 0;
 		curs_set(0);
 		if(key == KBD_ENTER && call_back && 

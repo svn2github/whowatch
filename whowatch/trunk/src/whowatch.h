@@ -1,5 +1,3 @@
-// -*-c++-*-
-#include <string>
 #include <stdio.h>
 #include <errno.h>
 #include <err.h>
@@ -31,17 +29,13 @@
 enum key { ENTER=0x100, UP, DOWN, LEFT, RIGHT, DELETE, ESC, CTRL_K,                      
                 CTRL_I, PG_DOWN, PG_UP, HOME, END, BACKSPACE, TAB };
 
-#ifdef DEBUG
-extern FILE *g_debug_file;
-#endif
-
-extern int g_screen_rows;
-extern int g_screen_cols;
-extern char *g_line_buf; /* global buffer for line printing */
-extern int g_buf_size; /* allocated buffer size	*/
-extern unsigned long long g_ticks;
-extern WINDOW *g_main_win;
-extern bool g_full_cmd;
+extern FILE *debug_file;
+extern int screen_rows, screen_cols;
+extern char *line_buf;
+extern int buf_size;
+extern unsigned long long ticks;
+extern WINDOW *main_win;
+extern int full_cmd;
 
 /*
  * Data associated with window are line numbered. If scrolling
@@ -65,6 +59,7 @@ struct window
 
 struct user_t
 {
+        struct list_head head;
         char name[UT_NAMESIZE + 1];     /* login name                   */
         char tty[UT_LINESIZE + 1];      /* tty                          */
         int pid;                        /* pid of login shell           */
@@ -73,11 +68,8 @@ struct user_t
         int line;                       /* line number                  */
 };
 
-extern struct window g_users_list;
-extern struct window g_proc_win;
-extern struct window g_help_win;
-extern struct window g_info_win;
-extern struct window *g_current;
+extern struct window users_list, proc_win, help_win, info_win;
+extern struct window *current;
 
 struct process
 {
@@ -101,7 +93,6 @@ void users_list_refresh();
 void allocate_error();
 void prg_exit(char *);
 void send_signal(int, pid_t);
-std::string int_to_string (int x);
 
 /* process.c */
 void show_tree(pid_t);
@@ -116,7 +107,7 @@ int below(int, struct window *);
 int above(int, struct window *);
 int outside(int, struct window *);
 void win_init(void);
-int print_line(struct window *w, char *s, int line, int virtual_);
+int print_line(struct window *w, char *s, int line, int virtual);
 int echo_line(struct window *w, char *s, int line);
 void cursor_on(struct window *w, int line);
 void cursor_off(struct window *w, int line);
@@ -155,10 +146,11 @@ void sys_info(int);
 void get_boot_time(void);
 
 /* owner.c */
-std::string get_owner_name (int uid);
+char *get_owner_name(int u);
 
 /* block.c */
 void *get_empty(int, struct list_head *);
+int free_entry(void *, int, struct list_head *);
 void dolog(const char *, ...);
 
 /* subwin.c */
@@ -208,6 +200,7 @@ int reg_match(const char *);
 void set_search(char *);
 
 /* kbd.c */
+int getkey();
 int read_key ();
 
 /* term.c */

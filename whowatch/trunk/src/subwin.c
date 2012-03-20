@@ -3,21 +3,21 @@
  * information (ie. help) or signal list. Some subwindows has a builtin
  * plugin and can handle loaded plugins.
  */
-#include "config.h"
 #include "whowatch.h"
+#include "config.h"
 #include "subwin.h"
 #include "pluglib.h"
 #include <dlfcn.h>
 
-static struct subwin sub_info;	/* doesn't support plugins, for static info */
-static struct subwin sub_main;	/* contains functions for printing sysinfo  */
-static struct subwin sub_proc;	/* selected process details		    */
-static struct subwin sub_user;	/* selected user details		    */
-static struct subwin sub_signal;/* signal list - this one has an arrow	    */
-struct subwin *g_sub_current; /* details currently displayed		    */
-struct pad_t *g_main_pad;	/* ncurses pad for printing details	    */
+struct subwin sub_info;		/* doesn't support plugins, for static info */
+struct subwin sub_main;		/* contains functions for printing sysinfo  */
+struct subwin sub_proc;		/* selected process details		    */
+struct subwin sub_user;		/* selected user details		    */
+struct subwin sub_signal;	/* signal list - this one has an arrow	    */
+struct subwin *sub_current;	/* details currently displayed		    */
+struct pad_t *main_pad;		/* ncurses pad for printing details	    */
 static WINDOW *border_wd;	/* ncurses pad for printing frame	    */
-static char dlerr[128];		/* error returned by dlopen and dlsym	    */
+char dlerr[128];		/* error returned by dlopen and dlsym	    */
 static int arrow_prev;		/* previous arrow position		    */
 static int cur_pid;		/* pid of the selected process		    */
 
@@ -50,58 +50,58 @@ static struct signal_t signals[] = {
  * differently. 'y' key is used to accept sending selected
  * signal.
  */
-static int handle_arrow (int key)
+static int handle_arrow(int key)
 {
-        assert(g_sub_current);
-        assert(g_main_pad);
+assert(sub_current);
+assert(main_pad);
 	switch(key) {
 	case 'z':
-		if (g_sub_current->arrow < g_sub_current->lines-1) 
-			g_sub_current->arrow++;
-		if (g_sub_current->arrow > g_sub_current->offset + g_main_pad->size_y - PAD_Y) 
-			g_sub_current->offset++;
+		if(sub_current->arrow < sub_current->lines-1) 
+			sub_current->arrow++;
+		if(sub_current->arrow > sub_current->offset + main_pad->size_y - PAD_Y) 
+			sub_current->offset++;
 		break;
 	case 'a':
-		if(g_sub_current->arrow) g_sub_current->arrow--; 
-		if(g_sub_current->arrow == g_sub_current->offset - 1) 
-			g_sub_current->offset--;
+		if(sub_current->arrow) sub_current->arrow--; 
+		if(sub_current->arrow == sub_current->offset - 1) 
+			sub_current->offset--;
 		break;
 	case 'y':
 		dolog("%s: sending %d signal to %d\n",
-			__FUNCTION__, signals[g_sub_current->arrow].sig, cur_pid);
-		do_signal(signals[g_sub_current->arrow].sig, cur_pid);
+			__FUNCTION__, signals[sub_current->arrow].sig, cur_pid);
+		do_signal(signals[sub_current->arrow].sig, cur_pid);
 		return KEY_HANDLED;
 	default: return KEY_SKIPPED;
 	}
-	assert(g_main_pad->wd);
-	mvwaddstr(g_main_pad->wd, arrow_prev, 0, "  ");
+assert(main_pad->wd);
+	mvwaddstr(main_pad->wd, arrow_prev, 0, "  ");
 	boldon();
-	mvwaddstr(g_main_pad->wd, g_sub_current->arrow, 0, "->");
+	mvwaddstr(main_pad->wd, sub_current->arrow, 0, "->");
 	boldoff();
-	arrow_prev = g_sub_current->arrow;
+	arrow_prev = sub_current->arrow;
 	return KEY_HANDLED;
 }
 
 static int keys_inside(int key)
 {
-	assert(g_sub_current);
-	assert(g_main_pad);
-	if(!g_main_pad->wd) return 0;
-	if(g_sub_current->arrow >= 0 && handle_arrow(key)) return KEY_HANDLED;
+assert(sub_current);
+assert(main_pad);
+	if(!main_pad->wd) return 0;
+	if(sub_current->arrow >= 0 && handle_arrow(key)) return KEY_HANDLED;
 	switch(key) {
 	case 'z':
-		if(g_sub_current->lines > g_sub_current->offset + g_main_pad->size_y - PAD_Y) 
-			g_sub_current->offset++;
+		if(sub_current->lines > sub_current->offset + main_pad->size_y - PAD_Y) 
+			sub_current->offset++;
 		break;
 	case 'a':
-		if(g_sub_current->offset) g_sub_current->offset--;
+		if(sub_current->offset) sub_current->offset--;
 		break;
 	case KBD_RIGHT:
-		if(SUBWIN_COLS - g_sub_current->xoffset > g_main_pad->size_x - PAD_X + 1) 
-			 g_sub_current->xoffset++;
+		if(SUBWIN_COLS - sub_current->xoffset > main_pad->size_x - PAD_X + 1) 
+			 sub_current->xoffset++;
 		break;
 	case KBD_LEFT:
-		if(g_sub_current->xoffset) g_sub_current->xoffset--;
+		if(sub_current->xoffset) sub_current->xoffset--;
 		break;
 	default: return KEY_SKIPPED;
 	}
@@ -133,14 +133,14 @@ static void signal_list(void *p)
 		title("  %s ", buf);
 		println("%s",signals[i].descr);
 	}
-	mvwaddstr(g_main_pad->wd, g_sub_current->arrow, 0, "->");
+	mvwaddstr(main_pad->wd, sub_current->arrow, 0, "->");
 }
 
 
 static void set_size(struct pad_t *p)
 {
-	p->size_y = g_screen_rows - PAD_Y;
-	p->size_x = g_screen_cols - PAD_X;
+	p->size_y = screen_rows - PAD_Y;
+	p->size_x = screen_cols - PAD_X;
 }
 
 static inline void print_titles(void)
@@ -154,10 +154,10 @@ static inline void print_titles(void)
  */
 static void pad_create(struct subwin *w)
 {
-assert(g_sub_current);
-	g_main_pad->wd = newpad(SUBWIN_ROWS, SUBWIN_COLS);
-	if(!g_main_pad->wd) prg_exit("pad_create(): cannot create details window. [1]");
-	set_size(g_main_pad);
+assert(sub_current);
+	main_pad->wd = newpad(SUBWIN_ROWS, SUBWIN_COLS);
+	if(!main_pad->wd) prg_exit("pad_create(): cannot create details window. [1]");
+	set_size(main_pad);
 	w->offset = w->lines = w->xoffset = 0;
 	border_wd = newpad(BORDER_ROWS+1, BORDER_COLS+1);
 	if(!border_wd) prg_exit("pad_create(): cannot create details window. [2]");
@@ -165,8 +165,8 @@ assert(g_sub_current);
 	werase(border_wd);
 	box(border_wd, ACS_VLINE, ACS_HLINE);
 	print_titles();
-	wbkgd(g_main_pad->wd, COLOR_PAIR(8));
-	werase(g_main_pad->wd);
+	wbkgd(main_pad->wd, COLOR_PAIR(8));
+	werase(main_pad->wd);
 }	
 
 /* 
@@ -174,24 +174,24 @@ assert(g_sub_current);
  */
 static inline void pad_destroy(void)
 {
-	if(delwin(g_main_pad->wd) == ERR) prg_exit("Cannot delete details window.");
+	if(delwin(main_pad->wd) == ERR) prg_exit("Cannot delete details window.");
 	if(delwin(border_wd) == ERR) prg_exit("Cannot delete details window.");
-	g_main_pad->wd = 0;
-	redrawwin(g_main_win);
+	main_pad->wd = 0;
+	redrawwin(main_win);
 }
 
 void pad_refresh(void)
 {
-	if(!g_main_pad->wd) return;
+	if(!main_pad->wd) return;
 	pnoutrefresh(border_wd, 0, 0, MARG_Y-1, MARG_X-1, LR_Y+1 , LR_X+1);
-	pnoutrefresh(g_main_pad->wd, g_sub_current->offset, g_sub_current->xoffset, 
-		     MARG_Y, MARG_X, LR_Y, LR_X);
+	pnoutrefresh(main_pad->wd, sub_current->offset, sub_current->xoffset, 
+		MARG_Y, MARG_X, LR_Y, LR_X);
 }
 
 static inline void draw_plugin(void *p)
 {
-assert(g_sub_current->plugin_draw);
-	g_sub_current->plugin_draw(p);
+assert(sub_current->plugin_draw);
+	sub_current->plugin_draw(p);
 }
 
 /*
@@ -201,7 +201,7 @@ static void *on_cursor(void)
 {
 	static void *p = NULL;
 	static int pid;
-	if(g_current == &g_users_list)
+	if(current == &users_list)
 		p = cursor_user()->name;
 	else {
 		pid = cursor_pid();
@@ -218,13 +218,13 @@ static void *on_cursor(void)
 void pad_draw(void)
 {
 	void *p;
-	assert(g_sub_current);
+assert(sub_current);
 	dolog("%s: entering\n", __FUNCTION__);	
-	if(!g_main_pad->wd) return;
-	werase(g_main_pad->wd);
-	g_sub_current->lines = 0; 
+	if(!main_pad->wd) return;
+	werase(main_pad->wd);
+	sub_current->lines = 0; 
 
-	if(g_sub_current == &sub_info) {
+	if(sub_current == &sub_info) {
 		draw_plugin(0);
 //		pad_refresh();
 		dolog("%s; info only..skipping draw\n", __FUNCTION__);
@@ -232,23 +232,23 @@ void pad_draw(void)
 	}
 	p = on_cursor();
 	/* handle flags returned by loaded plugin */
-	if(g_sub_current->flags & OVERWRITE) 
+	if(sub_current->flags & OVERWRITE) 
 		draw_plugin(p);
-	else if(g_sub_current->flags & INSERT) {
+	else if(sub_current->flags & INSERT) {
 		draw_plugin(p);
-		g_sub_current->builtin_draw(p);
+		sub_current->builtin_draw(p);
 	}
-	else if(g_sub_current->flags & APPEND) {
-		g_sub_current->builtin_draw(p);
+	else if(sub_current->flags & APPEND) {
+		sub_current->builtin_draw(p);
 		draw_plugin(p);
 	}		
 	else {
 		dolog("%s; only builtin draw\n", __FUNCTION__);
-		g_sub_current->builtin_draw(p);
+		sub_current->builtin_draw(p);
 	}	
 	/* number of data lines probably has changed - adjust offset */
-	if(g_sub_current->offset + g_main_pad->size_y - PAD_Y > g_sub_current->lines) 
-		g_sub_current->offset = g_sub_current->lines - (g_main_pad->size_y - PAD_Y);
+	if(sub_current->offset + main_pad->size_y - PAD_Y > sub_current->lines) 
+		sub_current->offset = sub_current->lines - (main_pad->size_y - PAD_Y);
 }
 
 /* 
@@ -256,15 +256,15 @@ void pad_draw(void)
  */
 void pad_resize(void)
 {
-	set_size(g_main_pad);
-	if(!g_main_pad->wd) return;
-//	wresize(border_wd, g_main_pad->size_y-PAD_Y+3, g_main_pad->size_x-PAD_X+3);
+	set_size(main_pad);
+	if(!main_pad->wd) return;
+//	wresize(border_wd, main_pad->size_y-PAD_Y+3, main_pad->size_x-PAD_X+3);
 	wresize(border_wd, BORDER_ROWS+1, BORDER_COLS+1);
 	werase(border_wd);
 	box(border_wd, ACS_VLINE, ACS_HLINE);
 	print_titles();
-	wbkgd(g_main_pad->wd, COLOR_PAIR(8));
-	werase(g_main_pad->wd);
+	wbkgd(main_pad->wd, COLOR_PAIR(8));
+	werase(main_pad->wd);
 	pad_draw();
 	pad_refresh();
 }	
@@ -276,11 +276,11 @@ void pad_resize(void)
 static void sub_change(struct subwin *w)
 {
 	if(w->arrow >= 0) w->arrow = arrow_prev = 0;
-	if(g_main_pad->wd) {
+	if(main_pad->wd) {
 		box(border_wd, ACS_VLINE, ACS_HLINE);
 		print_titles();
 	}
-	if(!g_main_pad->wd) pad_create(w);
+	if(!main_pad->wd) pad_create(w);
 assert(w->plugin_draw);
 	pad_draw();
 
@@ -337,7 +337,7 @@ AGAIN:
 		break;
 		}
 	}	
-	type = (int*)dlsym(h, "plugin_type");
+	type = dlsym(h, "plugin_type");
 	if((err = dlerror())) goto ERROR;	
 	if(*type >= SUBWIN_NR) {
 		snprintf(dlerr, sizeof dlerr, "Unknown plugin type [%d]", *type);
@@ -345,12 +345,12 @@ AGAIN:
 		return dlerr;
 	}	
 	target = sb[*type];
-	target->plugin_init = (int (*) (void*))dlsym(h, "plugin_init");
+	target->plugin_init = dlsym(h, "plugin_init");
 	if((err = dlerror())) goto ERROR;
-	target->plugin_draw = (void (*) (void*))dlsym(h, "plugin_draw");
+	target->plugin_draw = dlsym(h, "plugin_draw");
 	if((err = dlerror())) goto ERROR;
-	target->plugin_clear = (void (*) ())dlsym(h, "plugin_clear");
-	target->plugin_cleanup = (void (*) ())dlsym(h, "plugin_cleanup");
+	target->plugin_clear = dlsym(h, "plugin_clear");
+	target->plugin_cleanup = dlsym(h, "plugin_cleanup");
 	/* close previous library if it was loaded */
 	if(target->handle) {
 		int i;
@@ -387,12 +387,12 @@ static inline void builtin_set(void)
  */
 void sub_switch(void)
 {
-	if(g_sub_current == &sub_info || g_sub_current == &sub_main) return;
-	if(g_current == &g_users_list) {
-		if(g_sub_current == &sub_signal && g_main_pad->wd) pad_destroy();
-		else g_sub_current = &sub_user;
+	if(sub_current == &sub_info || sub_current == &sub_main) return;
+	if(current == &users_list) {
+		if(sub_current == &sub_signal && main_pad->wd) pad_destroy();
+		else sub_current = &sub_user;
 	}
-	else g_sub_current = &sub_proc;
+	else sub_current = &sub_proc;
 }
 
 void subwin_init(void)
@@ -401,8 +401,8 @@ void subwin_init(void)
 	sub_main.plugin_draw = dummy_draw;
 	sub_main.plugin_clear = dummy;
 	sub_main.plugin_cleanup = dummy;
-	g_main_pad = (pad_t*)calloc(1, sizeof(struct pad_t));
-	if(!g_main_pad) prg_exit("subwin_init(): cannot allocate memory.");
+	main_pad = calloc(1, sizeof(struct pad_t));
+	if(!main_pad) prg_exit("subwin_init(): cannot allocate memory.");
 	sub_main.arrow = -1;
 	memcpy(&sub_proc, &sub_main, sizeof(sub_main));
 	memcpy(&sub_user, &sub_main, sizeof(sub_main));
@@ -413,7 +413,7 @@ void subwin_init(void)
 	sub_signal.flags |= PERIODIC;
 	sub_signal.arrow = 0;
 //sub_user.flags |= INSERT;
-	g_sub_current = &sub_user;
+	sub_current = &sub_user;
 	/* set builtin plugins */
 	builtin_set();
 	dolog("%s: %d %d\n", __FUNCTION__, sub_main.arrow, sub_proc.arrow);
@@ -425,40 +425,40 @@ int sub_keys(int key)
 	if(keys_inside(key)) return KEY_HANDLED;
 	switch(key) {
 	case 'd': 
-		if(g_current == &g_users_list) {
-			 g_sub_current = &sub_user;
+		if(current == &users_list) {
+			 sub_current = &sub_user;
 			 break;
 		}
-		g_sub_current = &sub_proc;
+		sub_current = &sub_proc;
 		break;
 	case 'l':
-		if (g_current == &g_users_list) return KEY_HANDLED;
-		g_sub_current = &sub_signal;
+		if(current == &users_list) return KEY_HANDLED;
+		sub_current = &sub_signal;
 		break;	
 	case 's':
-		g_sub_current = &sub_main;
+		sub_current = &sub_main;
 		break;
 	case 'q':
 	case KBD_ESC:
-		if(g_main_pad->wd) {
+		if(main_pad->wd) {
 			pad_destroy();
 			return KEY_HANDLED;
 		}	
 	default: return KEY_SKIPPED;
 	}
 	dolog("%s: key processed\n", __FUNCTION__);	
-	dolog("%s: cur %d, %d %d\n", __FUNCTION__, g_sub_current->arrow, sub_main.arrow, sub_proc.arrow);
+	dolog("%s: cur %d, %d %d\n", __FUNCTION__, sub_current->arrow, sub_main.arrow, sub_proc.arrow);
 
-	sub_change(g_sub_current);
-	dolog("%s: cur %d, %d %d\n", __FUNCTION__, g_sub_current->arrow, sub_main.arrow, sub_proc.arrow);
+	sub_change(sub_current);
+	dolog("%s: cur %d, %d %d\n", __FUNCTION__, sub_current->arrow, sub_main.arrow, sub_proc.arrow);
 
 	return KEY_HANDLED;
 }
 
 void sub_periodic(void)
 {
-	if(!g_main_pad->wd) return;
-	if(g_sub_current->flags & PERIODIC) {
+	if(!main_pad->wd) return;
+	if(sub_current->flags & PERIODIC) {
 	dolog("%s: doing plugin (and perhaps builtin) draw\n", __FUNCTION__);
 		pad_draw();
 	}
@@ -472,8 +472,8 @@ void sub_periodic(void)
 void new_sub(void (*f)(void *))
 {
 	sub_info.plugin_draw = f;
-	g_sub_current = &sub_info;
-	sub_change(g_sub_current);
+	sub_current = &sub_info;
+	sub_change(sub_current);
 }
 
 /* 
@@ -483,6 +483,6 @@ void new_sub(void (*f)(void *))
  */	
 int can_draw(void)
 {
-	if(g_sub_current == &sub_info || g_sub_current == &sub_main) return 0;
+	if(sub_current == &sub_info || sub_current == &sub_main) return 0;
 	return 1;
 }

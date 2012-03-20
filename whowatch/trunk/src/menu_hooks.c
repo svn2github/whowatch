@@ -19,17 +19,17 @@ void m_details(void)
 
 void m_kill(void)
 {
-	g_current->keys('K' | KBD_CTRL);
+	current->keys('K' | KBD_CTRL);
 }
 
 void m_hup(void)
 {
-	g_current->keys('U' | KBD_CTRL);
+	current->keys('U' | KBD_CTRL);
 }
 
 void m_term(void)
 {
-	g_current->keys('T' | KBD_CTRL);
+	current->keys('T' | KBD_CTRL);
 }
 
 void m_sysinfo(void)
@@ -46,28 +46,28 @@ void m_siglist(void)
 
 void m_process(void)
 {
-	g_current->keys('t');
+	current->keys('t');
 }
 
 void m_owner(void)
 {
-	g_current->keys('o');
+	current->keys('o');
 }
 
 void m_long(void)
 {
-	g_full_cmd = !g_full_cmd;
-	g_current->redraw();
+	full_cmd ^= 1;
+	current->redraw();
 }
 
 void m_switch(void)
 {
-	g_current->keys(KBD_ENTER);
+	current->keys(KBD_ENTER);
 }
 
 void m_idle(void)
 {
-	g_current->keys('i');
+	current->keys('i');
 }
 
 static void print_about(void *unused)

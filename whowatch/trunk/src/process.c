@@ -1,12 +1,12 @@
 #include "whowatch.h"
 #include "proctree.h"
 
-static int allocated;
-static int lines_before_curs;	/* how many lines was inserted before cursor */
+int allocated;
+int lines_before_curs;	/* how many lines was inserted before cursor */
 
 static struct process *begin;
 static pid_t tree_root = 1;
-static bool show_owner;
+static unsigned int show_owner;
 
 static void proc_del(struct process *p)
 {						
@@ -14,7 +14,7 @@ static void proc_del(struct process *p)
 	if (p->next) p->next->prev = p->prev;
 	if (p->proc) p->proc->priv = 0;	
 	free(p);
-	g_proc_win.d_lines--;					
+	proc_win.d_lines--;					
 	allocated--;					
 }
 
@@ -50,9 +50,9 @@ static void clear_list()
  */
 static void check_line(int line)
 {
-	if (!g_proc_win.offset && !g_proc_win.cursor) return;
-	if (line <= g_proc_win.cursor + g_proc_win.offset)
-		g_proc_win.offset++;
+	if (!proc_win.offset && !proc_win.cursor) return;
+	if (line <= proc_win.cursor + proc_win.offset)
+		proc_win.offset++;
 }
 
 static void synchronize(void)
@@ -68,10 +68,10 @@ static void synchronize(void)
 			current = &((*current)->next);
 			continue;
 		}
-		z = (process*)malloc(sizeof *z);
+		z = malloc(sizeof *z);
 		if (!z) allocate_error();
 		allocated++;
-		g_proc_win.d_lines++;
+		proc_win.d_lines++;
 		memset(z, 0, sizeof *z);
 		check_line(l);
 		z->line = l++;
@@ -99,7 +99,7 @@ static void delete_tree_lines()
 			continue;
 		}
 //dolog(__FUNCTION__": line %d\n", p->line);
-		delete_line(&g_proc_win, p->line);
+		delete_line(&proc_win, p->line);
 		u = p;
 		while(u) {
 			u->line--;
@@ -125,18 +125,17 @@ static char *prepare_line(struct process *p)
 	if (!p) return 0;
 	tree = tree_string(tree_root, p->proc);
 	get_state(p);
-	if (show_owner) {
-	  snprintf (g_line_buf, g_buf_size,"\x3%5d %c%c \x3%-8s \x2%s \x3%s", 
-		   p->proc->pid, get_state_color(p->state), 
-		    p->state, get_owner_name(p->uid).c_str(), tree, 
-		    get_cmdline(p->proc->pid));
-	}
-	else {
-		snprintf(g_line_buf, g_buf_size,"\x3%5d %c%c \x2%s \x3%s", 
+	if(show_owner) 
+		snprintf(line_buf, buf_size,"\x3%5d %c%c \x3%-8s \x2%s \x3%s", 
+			p->proc->pid, get_state_color(p->state), 
+			p->state, get_owner_name(p->uid), tree, 
+			get_cmdline(p->proc->pid));
+	else 
+		snprintf(line_buf, buf_size,"\x3%5d %c%c \x2%s \x3%s", 
 			p->proc->pid, get_state_color(p->state), 
 			p->state, tree, get_cmdline(p->proc->pid));
-	}	
-	return g_line_buf;
+		
+	return line_buf;
 }
 
 	
@@ -163,7 +162,7 @@ static pid_t pid_from_tree(int line)
 
 pid_t cursor_pid(void) 
 {
-	return pid_from_tree(g_proc_win.cursor + g_proc_win.offset);
+	return pid_from_tree(proc_win.cursor + proc_win.offset);
 }
 
 /*
@@ -182,7 +181,7 @@ unsigned int getprocbyname(int l)
 		snprintf(buf, sizeof buf, "%d", p->proc->pid);
 		if(reg_match(buf)) return p->line;
 		/* next process owner */
-		if(show_owner && reg_match(get_owner_name(p->uid).c_str())) 
+		if(show_owner && reg_match(get_owner_name(p->uid))) 
 			return p->line;
 		tmp = get_cmdline(p->proc->pid);
 		if(reg_match(tmp)) return p->line;
@@ -207,16 +206,16 @@ static void dump_list(void )
 void tree_title(struct user_t *u)
 {
 	char buf[64];
-	if(!u) snprintf(buf, sizeof buf, "%d processes", g_proc_win.d_lines);
+	if(!u) snprintf(buf, sizeof buf, "%d processes", proc_win.d_lines);
 	else snprintf(buf, sizeof buf, "%-14.14s %-9.9s %-6.6s %s",
                 	u->parent, u->name, u->tty, u->host);
-	wattrset(g_info_win.wd, A_BOLD);
-        echo_line(&g_info_win, buf, 1);
+	wattrset(info_win.wd, A_BOLD);
+        echo_line(&info_win, buf, 1);
 }
 
 static void clear_tree_title(void)
 {
-	WINDOW *w = g_info_win.wd;
+	WINDOW *w = info_win.wd;
 	wmove(w, 1, 0);
 	wclrtoeol(w);
 	wnoutrefresh(w);
@@ -227,19 +226,19 @@ static void draw_tree(void)
 {
 	struct process *p;
 	if(!begin) {
-		WINDOW *w = g_proc_win.wd;
+		WINDOW *w = proc_win.wd;
 		wmove(w, 0, 0);
 		wclrtoeol(w);
 		wattrset(w, A_NORMAL);
 		waddstr(w, "User logged out");
-		g_current->d_lines = 1;		
+		current->d_lines = 1;		
 		return;
 	}
 	for(p = begin; p ;p = p->next) {
 		if(!p->proc) continue;
-		if(above(p->line, &g_proc_win)) continue;
-		if(below(p->line, &g_proc_win)) break;
-		print_line(&g_proc_win,prepare_line(p), p->line, 0);
+		if(above(p->line, &proc_win)) continue;
+		if(below(p->line, &proc_win)) break;
+		print_line(&proc_win,prepare_line(p), p->line, 0);
 	}
 }
 
@@ -254,7 +253,7 @@ static void tree_periodic(void)
 void show_tree(pid_t pid)
 {
 //        print_help(state);
-	g_proc_win.offset = g_proc_win.cursor = 0;
+	proc_win.offset = proc_win.cursor = 0;
 	tree_root = INIT_PID;
 	if(pid > 0) tree_root = pid; 
         tree_periodic();
@@ -292,8 +291,8 @@ static int proc_key(int key)
 	if(signal_keys(key)) return KEY_HANDLED;
         switch(key) {
         case ENTER:
-                werase(g_main_win);
-                g_current = &g_users_list;
+                werase(main_win);
+                current = &users_list;
 		print_help();
                 clear_tree_title();
                 clear_list();
@@ -302,7 +301,7 @@ static int proc_key(int key)
 		pad_draw();
 		break;
         case 'o':
-                show_owner = !show_owner;
+                show_owner ^= 1;
                 draw_tree();
                 break;
         case 't':
@@ -317,8 +316,8 @@ static int proc_key(int key)
 
 void procwin_init(void)
 {
-	g_proc_win.giveme_line = proc_give_line;
-	g_proc_win.keys = proc_key;
-	g_proc_win.periodic = tree_periodic;
-	g_proc_win.redraw = draw_tree;
+	proc_win.giveme_line = proc_give_line;
+	proc_win.keys = proc_key;
+	proc_win.periodic = tree_periodic;
+	proc_win.redraw = draw_tree;
 }

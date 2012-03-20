@@ -1,8 +1,5 @@
-#include "config.h"
 #include "whowatch.h"
-
-#include <list>
-#include <boost/foreach.hpp>
+#include "config.h"
 
 #ifndef UTMP_FILE
 #define UTMP_FILE 	"/var/run/utmp"
@@ -19,9 +16,12 @@
 #define ut_user ut_name
 #endif
 
-static std::list<user_t*> users_l;
+LIST_HEAD(users_l);
 static int wtmp_fd;
-static bool toggle;	/* if 0 show cmd line else show idle time 	*/
+static int toggle;	/* if 0 show cmd line else show idle time 	*/
+
+char *line_buf;		/* global buffer for line printing		*/
+int buf_size;		/* allocated buffer size			*/
 
 #ifdef HAVE_PROCESS_SYSCTL
 int get_login_pid(char *);
@@ -29,7 +29,7 @@ int get_login_pid(char *);
 
 struct prot_t
 {
-	const char *s;
+	char *s;
 	short port;
 	unsigned int nr;
 };
@@ -54,10 +54,11 @@ static struct prot_t prot_tab[] = {
  */
 void u_count(char *name, int p)
 {
+	int i;
 	struct prot_t *t;
-	g_users_list.d_lines += p;
-	dolog("%s : dlines %d\n", __FUNCTION__, g_users_list.d_lines);	
-	for (int i = 0; i < sizeof prot_tab/sizeof(struct prot_t); i++){
+	users_list.d_lines += p;
+	dolog("%s : dlines %d\n", __FUNCTION__, users_list.d_lines);	
+	for(i = 0; i < sizeof prot_tab/sizeof(struct prot_t); i++){
 		t = &prot_tab[i];
 		if(strncmp(t->s, name, strlen(t->s))) continue;
 		t->nr += p;
@@ -67,22 +68,24 @@ void u_count(char *name, int p)
 /*
  * After deleting line, update line numbers in each user structure 
  */
-void update_line (int line)
+void update_line(int line)
 {
-	BOOST_FOREACH (user_t *u, users_l)
-	{
-		if (u->line > line) u->line--;
+	struct user_t *u;
+	struct list_head *tmp;
+	list_for_each(tmp, &users_l) {
+		u = list_entry(tmp, struct user_t, head); 
+		if(u->line > line) u->line--;
 	}	
 }
 			
 /* 
  * Create new user structure and fill it
  */
-struct user_t *alloc_user (struct utmp *entry)
+struct user_t *alloc_user(struct utmp *entry)
 {
 	struct user_t *u;
 	int ppid;
-	u = (user_t*)calloc(1, sizeof *u);
+	u = calloc(1, sizeof *u);
 	if(!u) errx(1, "Cannot allocate memory.");
 	strncpy(u->name, entry->ut_user, UT_NAMESIZE);
 	strncpy(u->tty, entry->ut_line, UT_LINESIZE);
@@ -96,7 +99,7 @@ struct user_t *alloc_user (struct utmp *entry)
 		strncpy(u->parent, "can't access", sizeof u->parent);
 	else 	strncpy(u->parent, get_name(ppid), sizeof u->parent - 1);
 	
-	u->line = g_users_list.d_lines;
+	u->line = users_list.d_lines;
 	return u;
 }
 
@@ -104,28 +107,30 @@ static struct user_t* new_user(struct utmp *ut)
 {
 	struct user_t *u;
 	u = alloc_user(ut);
-	users_l.push_front (u);
+	list_add(&u->head, &users_l);
 	u_count(u->parent, LOGIN);
 	return u;
 }
-
+	
 static void print_user(struct user_t *u)
 {
-	wattrset(g_users_list.wd, A_BOLD);
-	snprintf(g_line_buf, g_buf_size, 
+	wattrset(users_list.wd, A_BOLD);
+	snprintf(line_buf, buf_size, 
 		"%-14.14s %-9.9s %-6.6s %-19.19s %s",
 		u->parent, u->name, u->tty, u->host, 
 		toggle?count_idle(u->tty):get_w(u->pid));
-	g_line_buf[g_buf_size - 1] = 0;
-	print_line(&g_users_list, g_line_buf , u->line, 0);
+	line_buf[buf_size - 1] = 0;
+	print_line(&users_list, line_buf , u->line, 0);
 }
 
 void users_list_refresh(void)
 {
-	BOOST_FOREACH (user_t *u, users_l)
-	{
-		if(above(u->line, &g_users_list)) continue;
-		if(below(u->line, &g_users_list)) break;
+	struct list_head *tmp;
+	struct user_t *u;
+	list_for_each_r(tmp, &users_l) {
+		u = list_entry(tmp, struct user_t, head);
+		if(above(u->line, &users_list)) continue;
+		if(below(u->line, &users_list)) break;
 		print_user(u);
 	}
 }
@@ -146,7 +151,7 @@ static void read_utmp(void)
 	}
 	while((i = read(fd, &entry,sizeof entry)) > 0) {
 		if(i != sizeof entry) errx(1, "Error reading " UTMP_FILE );
-#if defined HAVE_DECL_USER_PROCESS && HAVE_DECL_USER_PROCESS
+#ifdef HAVE_DECL_USER_PROCESS
 		if(entry.ut_type != USER_PROCESS) continue;
 #else
 		if(!entry.ut_name[0]) continue;
@@ -155,7 +160,7 @@ static void read_utmp(void)
 //		print_user(u);
 	}
 	close(fd);
-//	wnoutrefresh(g_users_list.wd);
+//	wnoutrefresh(users_list.wd);
 	return;
 }
 
@@ -165,25 +170,37 @@ static void read_utmp(void)
  */
 struct user_t *cursor_user(void)	
 {
-	int line = g_current->cursor + g_current->offset;
-	BOOST_FOREACH (user_t *u, users_l)
-	{
-		if (u->line == line) return u;
+	struct user_t *u;
+	struct list_head *h;
+	int line = current->cursor + current->offset;
+	list_for_each(h, &users_l) {
+		u = list_entry(h, struct user_t, head);
+		if(u->line == line) return u;
 	}
 	return 0;
 }
 
+static void del_user(struct user_t *u)
+{
+	delete_line(&users_list, u->line);
+	update_line(u->line);
+	u_count(u->parent, LOGOUT);
+	list_del(&u->head);
+	free(u);
+}
+
+
 void print_info(void)
 {
         char buf[128];
-	int other = g_users_list.d_lines - prot_tab[LOCAL].nr - 
+	int other = users_list.d_lines - prot_tab[LOCAL].nr - 
 		prot_tab[TELNET].nr - prot_tab[SSH].nr;
-	werase(g_info_win.wd);
+werase(info_win.wd);
         snprintf(buf, sizeof buf - 1,
                 "\x1%d users: (%d local, %d telnet, %d ssh, %d other)",
-                g_users_list.d_lines, prot_tab[LOCAL].nr, prot_tab[TELNET].nr, prot_tab[SSH].nr, other);
-        echo_line(&g_info_win, buf, 0);
-        wnoutrefresh(g_info_win.wd);
+                users_list.d_lines, prot_tab[LOCAL].nr, prot_tab[TELNET].nr, prot_tab[SSH].nr, other);
+        echo_line(&info_win, buf, 0);
+        wnoutrefresh(info_win.wd);
 }
 
 /*
@@ -196,14 +213,14 @@ void check_wtmp(void)
 	struct utmp entry;
 	int i, show, changed;
 	show = changed = 0;
-	if (g_current == &g_users_list) show = 1;
+	if(current == &users_list) show = 1;
 	while((i = read(wtmp_fd, &entry, sizeof entry)) > 0){ 
 		if (i < sizeof entry){
 			curses_end();
 			errx(1, "%s: error reading %s", __FUNCTION__, WTMP_FILE );
 		}
 		/* user just logged in */
-#if defined HAVE_DECL_USER_PROCESS && HAVE_DECL_USER_PROCESS
+#ifdef HAVE_DECL_USER_PROCESS
 		if(entry.ut_type == USER_PROCESS) {
 #else
 		if(entry.ut_user[0]) {
@@ -212,26 +229,17 @@ void check_wtmp(void)
 			changed = 1;
 			continue;
 		}
-#if defined HAVE_DECL_DEAD_PROCESS && HAVE_DECL_DEAD_PROCESS
+#ifdef HAVE_DECL_DEAD_PROCESS
 		if(entry.ut_type != DEAD_PROCESS) continue;
 #else
 //		if(entry.ut_line[0]) continue;
 #endif
 	/* user just logged out */
-		for (std::list<user_t*>::iterator i = users_l.begin();
-		     i != users_l.end();
-		     i++)
-		{
-			user_t *u = *i;
-			if (strncmp(u->tty, entry.ut_line, UT_LINESIZE)) 
+		list_for_each(h, &users_l) {
+			u = list_entry(h, struct user_t, head);
+			if(strncmp(u->tty, entry.ut_line, UT_LINESIZE)) 
 				continue;
-
-			delete_line(&g_users_list, u->line);
-			update_line(u->line);
-			u_count(u->parent, LOGOUT);
-			users_l.erase (i);
-			free(u);
-
+			del_user(u);	
 			changed = 1;
 			break;
 		}
@@ -243,29 +251,33 @@ void check_wtmp(void)
 
 char *users_list_giveline(int line)
 {
-	BOOST_FOREACH (user_t *u, users_l)
-	{
+	struct user_t *u;
+	struct list_head *h;	
+	list_for_each(h, &users_l) {
+		u = list_entry(h, struct user_t, head);
 		if (line != u->line) continue;
-		snprintf(g_line_buf, g_buf_size, 
+		snprintf(line_buf, buf_size, 
 			"%-14.14s %-9.9s %-6.6s %-19.19s %s", 
 			u->parent, u->name, u->tty, u->host, 
 				toggle?count_idle(u->tty):get_w(u->pid));
-		return g_line_buf;
+		return line_buf;
 	}
 	return "not available";
 }
 
 static void cmdline(void)
 {
-        struct window *q = &g_users_list;
+        struct window *q = &users_list;
+        struct user_t *u;
+        struct list_head *h;
+        int y, x;
 
-	if(CMD_COLUMN >= g_screen_cols) return;
-	BOOST_FOREACH (user_t *u, users_l)
-	{
-		int y, x;
-//              if (u->line < q->offset ||
-//                  u->line > q->offset + q->rows - 1)
-		if (outside(u->line, q)) continue;
+	if(CMD_COLUMN >= screen_cols) return;
+        list_for_each(h, &users_l) {
+                u = list_entry(h, struct user_t, head);
+//                if(u->line < q->offset ||
+  //                      u->line > q->offset + q->rows - 1)
+		if(outside(u->line, q)) continue;
 		wmove(q->wd, u->line - q->offset, CMD_COLUMN);
                 cursor_off(q, q->cursor);
                 wattrset(q->wd, A_BOLD);
@@ -291,8 +303,8 @@ static int ulist_key(int key)
 		u = cursor_user();
 		if(u) pid = u->pid; 
         case 't':
-		werase(g_main_win);
-		g_current = &g_proc_win;
+		werase(main_win);
+		current = &proc_win;
 		print_help();
 		show_tree(pid);
 		tree_title(u);
@@ -300,7 +312,7 @@ static int ulist_key(int key)
 		pad_draw();
 		break;
         case 'i':
-                toggle = !toggle;
+                toggle ^= 1;
                 cmdline();
                 break;
         default: return 0;
@@ -321,10 +333,10 @@ void users_init(void)
         if(lseek(wtmp_fd, 0, SEEK_END) == -1)
                 errx(1, "%s: cannot seek in %s, %s",
 			__FUNCTION__, WTMP_FILE, strerror(errno));
-	g_users_list.giveme_line = users_list_giveline;
-	g_users_list.keys = ulist_key;
-	g_users_list.periodic = periodic;
-	g_users_list.redraw = users_list_refresh;
+	users_list.giveme_line = users_list_giveline;
+	users_list.keys = ulist_key;
+	users_list.periodic = periodic;
+	users_list.redraw = users_list_refresh;
 	read_utmp();
 	print_info();
 }
@@ -335,8 +347,11 @@ void users_init(void)
  */
 unsigned int user_search(int line)
 {
-	BOOST_FOREACH (user_t *u, users_l)
-	{	
+	struct user_t *u;
+	struct list_head *h;
+	
+	list_for_each(h, &users_l) {
+		u = list_entry(h, struct user_t, head);
 		if(u->line < line) continue;
 		if(reg_match(u->parent)) return u->line;
 		if(reg_match(u->name)) return u->line;
@@ -347,3 +362,5 @@ unsigned int user_search(int line)
 	}
 	return -1;
 }
+
+

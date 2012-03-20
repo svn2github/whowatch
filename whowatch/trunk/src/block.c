@@ -13,7 +13,7 @@
 static FILE *logfile;
 static int nr_blocks;
 
-void dolog (const char *t, ...)
+void dolog(const char *t, ...)
 {
         va_list ap;
         char *c;
@@ -42,7 +42,7 @@ struct _block_tbl_t {
 static struct _block_tbl_t *new_block(int size, struct list_head *h)
 {
 	struct _block_tbl_t *tmp;
-	tmp = (_block_tbl_t*)calloc(1, sizeof *tmp);
+	tmp = calloc(1, sizeof *tmp);
 	if(!tmp) prg_exit("new_block(): Cannot allocate memory. [1]\n");
 	tmp->_block_t = calloc(1, size * TBL_SIZE);
 	dolog("%s: new block(%d) - alloc size = %d\n",
@@ -59,7 +59,7 @@ static struct _block_tbl_t *new_block(int size, struct list_head *h)
 void *get_empty(int size, struct list_head *h)
 {
 	int i;
-	int nr = 0;
+int nr = 0;
 	struct _block_tbl_t *tmp;
 	struct list_head *t;
 	list_for_each(t, h) {
@@ -76,5 +76,55 @@ nr++;
 FOUND:
 	dolog("%s: empty in %d block at %d pos\n", __FUNCTION__, nr, i);
 	tmp->map |= 1<<i;
-	return (char*)tmp->_block_t + (size * i);
+	return tmp->_block_t + (size * i);
 }
+
+#if 0
+/* dead code */
+/*
+ * Free all unused blocks of memory (map == 0)
+ */
+static void rm_free_blocks(struct list_head *head)
+{
+	struct _block_tbl_t *tmp;
+	struct list_head *t, *p;
+	t = head->next;
+	dolog("%s: entering\n", __FUNCTION__);
+	while(t != head) {
+		tmp = list_entry(t, struct _block_tbl_t, head);
+		p = t->next;
+		if(!tmp->map) {
+			dolog("%s: empty block found %p\n", __FUNCTION__, tmp);
+			free(tmp->_block_t);
+			list_del(&tmp->head);
+			free(tmp);
+		}
+		t = p;
+	}
+}
+#endif
+
+/*
+ * Find entry pointed by p and mark it unused.
+ */
+int free_entry(void *p, int size, struct list_head *h)
+{
+	struct _block_tbl_t *tmp;
+	struct list_head *t;
+int i = 0;
+	list_for_each(t, h) {
+		tmp = list_entry(t, struct _block_tbl_t, head);
+		if(p >= tmp->_block_t && p < (tmp->_block_t + size * TBL_SIZE))
+			goto FOUND;
+		i++;
+	}
+	dolog("%s: entry not found - error\n", __FUNCTION__);
+	return -1;
+FOUND:
+	dolog("%s: %p pointer found in %d\n", __FUNCTION__, p, i);
+	tmp->map &= ~(1<<(p - tmp->_block_t)/size);
+	dolog("%s: setting map pos %d to zero, map = %x\n",
+		__FUNCTION__, (p - tmp->_block_t)/size, tmp->map);
+	return 0;
+}		 	
+

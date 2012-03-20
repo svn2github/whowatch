@@ -76,7 +76,7 @@ static struct submenu_t *add_submenu(char *s)
 	struct submenu_t *t;
 	static int pos = TITLE_START;
 	
-	t = (submenu_t*)calloc(1, sizeof *t);
+	t = calloc(1, sizeof *t);
 	if(!t) prg_exit("add_submenu(): cannot allocate memory.");
 	t->title = s;
 	INIT_LIST_HEAD(&t->items);
@@ -145,7 +145,7 @@ void menu_refresh(void)
 
 static void set_size(void)
 {
-	menu.cols = g_screen_cols;
+	menu.cols = screen_cols;
 }
 
 /* 
@@ -212,8 +212,8 @@ static void menu_destroy()
 	menu.wd = submenu_wd = 0;
 	item_cursor = 0;
 	cur_item = 0;
-	redrawwin(g_main_win);
-	redrawwin(g_info_win.wd);
+	redrawwin(main_win);
+	redrawwin(info_win.wd);
 }
 
 static void highlight_item(struct submenu_t *t, int i)
@@ -254,9 +254,9 @@ assert(cur_submenu);
 		strlen(cur_submenu->title)+4, A_REVERSE, 9, 0);
 	wnoutrefresh(menu.wd);
 //	submenu_refresh(cur_submenu);
-redrawwin(g_main_win);
-wnoutrefresh(g_info_win.wd);
-redrawwin(g_info_win.wd);
+redrawwin(main_win);
+wnoutrefresh(info_win.wd);
+redrawwin(info_win.wd);
 }	
 
 static int submenu_show(void)

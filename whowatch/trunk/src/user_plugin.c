@@ -4,6 +4,8 @@
 #include "pluglib.h"
 #include <pwd.h>
 
+#define MAILBOX_PATH	"/var/spool/mail"
+
 /* 
  * Argument is a username taken from current
  * cursor position.

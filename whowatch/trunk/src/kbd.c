@@ -49,11 +49,10 @@ static int st_mouse(int c);
 
 static int (*state)(int) = st_start;
 
-static struct seq {
-  seq () { argp = arg; }
+struct seq {
 	char type, mod, argf, delf;
 	int arg[16], *argp;
-} seq;
+} seq = {argp: seq.arg};
 
 #define CSISEQ (seq.type == '[')
 #define SS3SEQ (seq.type == 'O')
@@ -285,7 +284,7 @@ static int incomplete()
 	return ordkey(p[-1]);
 }
 
-static int getkey()
+int getkey()
 {
 	int v, c;
 

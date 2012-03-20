@@ -4,11 +4,11 @@
 AC_PREREQ([2.67])
 AC_INIT([whowatch], [1.6.1])
 AM_INIT_AUTOMAKE
-AC_CONFIG_SRCDIR([src/whowatch.cc])
+AC_CONFIG_SRCDIR([src/whowatch.c])
 AC_CONFIG_HEADERS([src/config.h])
 
 # Checks for programs.
-AC_PROG_CXX
+AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
@@ -27,11 +27,6 @@ if test "$CURS" != "1"; then
 	AC_MSG_ERROR([Could not find proper curses library])
 fi
 AC_CHECK_LIB(dl, dlopen, [LIBS="$LIBS -ldl"])
-
-AX_BOOST_BASE([1.42.0],
- CXXFLAGS="$CXXFLAGS $BOOST_CPPFLAGS"
- LDFLAGS="$LDFLAGS $BOOST_LDFLAGS",
- AC_MSG_ERROR([Couldn't find boost libraries]))
 
 # Checks for header files.
 AC_HEADER_DIRENT

@@ -9,7 +9,7 @@ static regex_t cur_reg;
 /* 
  * Called by getprocbyname() and user_search(), instead of simple strncmp().
  */
-int reg_match(const char *s)
+inline int reg_match(const char *s)
 {
 	return !regexec(&cur_reg, s, 0, 0, REG_NOTEOL); 
 }
@@ -28,16 +28,16 @@ void do_search(char *s)
 		info_box(" Regex error ", errbuf);
 		return;
 	}
-	if (g_current == &g_proc_win)
-		p = getprocbyname(g_current->cursor + g_current->offset);
-	else p = user_search(g_current->cursor + g_current->offset);
+	if(current == &proc_win)
+		p = getprocbyname(current->cursor + current->offset);
+	else p = user_search(current->cursor + current->offset);
 	
 	snprintf(prev_search, sizeof prev_search, "%s", s);
 	set_search(prev_search);
 	regfree(&cur_reg);
 	if(p == -1) return;
 	/* move the cursor to appropriate line */
-	to_line(p, g_current);
+	to_line(p, current);
 	pad_draw();
 	dolog("%s: %d\n", __FUNCTION__, p);
 }

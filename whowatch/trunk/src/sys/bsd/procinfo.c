@@ -11,7 +11,7 @@
 #include "procinfo.h"
 
 #ifdef HAVE_LIBKVM
-static kvm_t *kd;
+kvm_t *kd;
 extern int can_use_kvm;
 #endif
 
@@ -32,11 +32,39 @@ struct procinfo
 /*
  * Get process info
  */
+#ifndef HAVE_PROCESS_SYSCTL
+void get_info(int pid, struct procinfo *p)
+{
+    	char buf[32];
+    	FILE *f;
+
+	p->ppid = -1;
+	p->cterm = -1;
+	/*
+	 *  getting uid by stat() on "/proc/pid" is in
+	 * separate function, see below get_stat() 
+	 */
+	p->euid = -1;
+	p->stat = ' ';
+	p->tpgid = -1;
+	strcpy(p->exec_file, "can't access");
+    	snprintf(buf, sizeof buf, "/proc/%d/stat", pid);
+    	if (!(f = fopen(buf,"rt"))) 
+    		return;
+    	if(fscanf(f,"%*d %128s %*c %d %*d %*d %*d %d",
+    			p->exec_file, &p->ppid, &p->tpgid) != 3) {
+    		fclose(f);
+    		return;
+    	}
+    	fclose(f);	
+	p->exec_file[EXEC_FILE] = '\0';
+}
+#else
 int fill_kinfo(struct kinfo_proc *info, int pid)
 {
 	int mib[] = { CTL_KERN, KERN_PROC, KERN_PROC_PID, pid };
-	size_t len = sizeof *info;
-	if (sysctl(mib, 4, info, &len, 0, 0) == -1) 
+	int len = sizeof *info;
+	if(sysctl(mib, 4, info, &len, 0, 0) == -1) 
 		return -1;
 	return len?0:-1;
 }
@@ -53,14 +81,15 @@ void get_info(int pid, struct procinfo *p)
 	
 	if(fill_kinfo(&info, pid) == -1) return;
 	
-    	p->ppid = info.ki_ppid;
-    	p->tpgid = info.ki_tpgid;
-    	p->euid = info.ki_svuid;
-    	p->stat = info.ki_stat;
-    	strncpy(p->exec_file, info.ki_comm, EXEC_FILE);
-    	p->cterm = info.ki_tdev;
+    	p->ppid = info.kp_eproc.e_ppid;
+    	p->tpgid = info.kp_eproc.e_tpgid;
+    	p->euid = info.kp_eproc.e_pcred.p_svuid;
+    	p->stat = info.kp_proc.p_stat;
+    	strncpy(p->exec_file, info.kp_proc.p_comm, EXEC_FILE);
+    	p->cterm = info.kp_eproc.e_tdev;
 	p->exec_file[EXEC_FILE] = '\0';
 }
+#endif
 
 /*
  * Get parent pid
@@ -72,6 +101,7 @@ int get_ppid(int pid)
 	return p.ppid;
 }
 
+#ifdef HAVE_PROCESS_SYSCTL
 /*
  * Get terminal
  */
@@ -92,8 +122,7 @@ int get_term(char *tty)
 int get_login_pid(char *tty)
 {
 	int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_TTY, 0};
-	int t, el, i, pid, cndt = -1, l;
-	size_t len;
+	int len, t, el, i, pid, cndt = -1, l;
 	struct kinfo_proc *info;
 	struct procinfo p;
 	
@@ -105,24 +134,24 @@ int get_login_pid(char *tty)
 	mib[3] = t;
 	if(sysctl(mib, 4, 0, &len, 0, 0) == -1)
 		return -1;
-	info = (kinfo_proc*)calloc(1, len);
+	info = calloc(1, len);
 	if(!info) return -1;
 	el = len/sizeof(struct kinfo_proc);
 	if(sysctl(mib, 4, info, &len, 0, 0) == -1)
 		return -1;
 	for(i = 0; i < el; i++) {
-		if(!(pid = info[i].ki_pid)) continue;
+		if(!(pid = info[i].kp_proc.p_pid)) continue;
 		get_info(get_ppid(pid), &p);
 		if(p.cterm == -1 || p.cterm != t) {
 			cndt = pid;
-			l = strlen(info[i].ki_comm);
+			l = strlen(info[i].kp_proc.p_comm);
 			/*
 			 * This is our best match: parent of the process
 			 * doesn't have controlling terminal and process'
 			 * name ends with "sh"
 			 *
 			 */
-			if(l > 1 && !strncmp("sh",info[i].ki_comm+l-2,2)) {
+			if(l > 1 && !strncmp("sh",info[i].kp_proc.p_comm+l-2,2)) {
 				free(info);
 				return pid;
 			}
@@ -132,10 +161,63 @@ int get_login_pid(char *tty)
 	return cndt;
 }
 
+/*
+ * Get information about all system processes
+ */
+int get_all_info(struct kinfo_proc **info)
+{
+	int mib[3] = { CTL_KERN, KERN_PROC, KERN_PROC_ALL };
+	int len, el;
+
+	if(sysctl(mib, 3, 0, &len, 0, 0) == -1)
+		return 0;
+	*info = calloc(1, len);
+	if(!*info) return 0;
+	el = len/sizeof(struct kinfo_proc);
+	if(sysctl(mib, 3, *info, &len, 0, 0) == -1)
+		return 0;
+	return el;
+}
+#endif 
 
 /* 
  * Return the complete command line for the process
  */
+#ifndef HAVE_PROCESS_SYSCTL
+char *get_cmdline(int pid)
+{
+        static char buf[512];
+	struct procinfo p;
+	char *t;
+	int c;
+        FILE *f;
+        int i = 0;
+        if(!full_cmd) goto no_full;
+        memset(buf, 0, sizeof buf);
+        sprintf(buf, "/proc/%d/cmdline",pid);
+        if (!(f = fopen(buf, "rt")))
+                return "-";
+        while (fread(buf+i,1,1,f) == 1){
+	        if (buf[i] == '\0') buf[i] = ' ';
+                if (i == sizeof buf - 1) break;
+                i++;
+        }
+        fclose(f);
+	buf[i] = '\0';
+	if(!i) {
+no_full:
+		get_info(pid, &p);
+		t = p.exec_file;
+		bzero(buf, sizeof buf);
+		c = strlen(t);
+		if(p.exec_file[0] == '(') t++;
+		if(p.exec_file[--c] == ')') p.exec_file[c] = 0;
+		strncpy(buf, t, sizeof buf - 1);
+	}	
+        return buf;
+}
+#endif
+
 #ifdef HAVE_LIBKVM
 int kvm_init()
 {
@@ -145,6 +227,7 @@ int kvm_init()
 }
 #endif
 
+#ifdef HAVE_PROCESS_SYSCTL
 char *get_cmdline(int pid)
 {
 	static char buf[512];
@@ -154,8 +237,8 @@ char *get_cmdline(int pid)
 	bzero(buf, sizeof buf);
 	if(fill_kinfo(&info, pid) == -1)
 		return "-";
-	memcpy(buf, info.ki_comm, sizeof buf - 1);
-	if(!g_full_cmd) return buf;
+	memcpy(buf, info.kp_proc.p_comm, sizeof buf - 1);
+	if(!full_cmd) return buf;
 #ifdef HAVE_LIBKVM
 	if(!can_use_kvm) return buf;
 	p = kvm_getargv(kd, &info, 0);
@@ -172,6 +255,7 @@ char *get_cmdline(int pid)
 	return buf;
 #endif
 }
+#endif
 	 
 /* 
  * Get process group ID of the process which currently owns the tty
@@ -199,6 +283,7 @@ char *get_name(int pid)
 /*
  * Get state and owner (effective uid) of a process
  */
+#ifdef HAVE_PROCESS_SYSCTL
 void get_state(struct process *p)
 {
 	struct procinfo pi;
@@ -212,6 +297,26 @@ void get_state(struct process *p)
 	}
 	p->state = s[pi.stat-1];
 }
+#else
+void get_state(struct process *p)
+{
+	char buf[256];
+	struct stat s;
+	char state;
+        FILE *f;
+        snprintf(buf, sizeof buf - 6, "/proc/%d", p->proc->pid);
+	p->uid = -1;
+	if (stat(buf, &s) >= 0) p->uid = s.st_uid;  
+	strcat(buf,"/stat");
+        if (!(f = fopen(buf,"rt"))){
+               	p->state = '?';
+		return;
+	}
+        fscanf(f,"%*d %*s %c",&state);
+	fclose(f);
+	p->state = state=='S'?' ':state;
+}
+#endif
 
 #ifndef HAVE_GETLOADAVG
 int getloadavg(double d[], int l)

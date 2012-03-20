@@ -1,4 +1,3 @@
-#include <sstream>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -6,22 +5,21 @@
 #include "config.h"
 
 #ifdef DEBUG
-FILE *g_debug_file;
+FILE *debug_file;
 #endif
 
 #define TIMEOUT 	3
 
-unsigned long long g_ticks;	/* increased every TIMEOUT seconds	*/
-struct window g_users_list;
-struct window g_proc_win;
-struct window *g_current;
-static int size_changed; 
-bool g_full_cmd = true;	/* if 1 then show full cmd line in tree		*/
-static int signal_sent;
-int g_screen_rows;	/* screen rows returned by ioctl  		*/
-int g_screen_cols;	/* screen cols returned by ioctl		*/
-char *g_line_buf;		/* global buffer for line printing		*/
-int g_buf_size;		/* allocated buffer size			*/
+unsigned long long ticks;	/* increased every TIMEOUT seconds	*/
+struct window users_list, proc_win;
+struct window *current;
+int size_changed; 
+int full_cmd = 1;	/* if 1 then show full cmd line in tree		*/
+int signal_sent;
+int screen_rows;	/* screen rows returned by ioctl  		*/
+int screen_cols;	/* screen cols returned by ioctl		*/
+char *line_buf;		/* global buffer for line printing		*/
+int buf_size;		/* allocated buffer size			*/
 
 //enum key { ENTER=KEY_MAX + 1, ESC, CTRL_K, CTRL_I };
 
@@ -34,12 +32,12 @@ struct key_handler {
  * These are key bindings to handle cursor movement.
  */
 static struct key_handler key_handlers[] = {
-	{ (key)KBD_UP, cursor_up	 	},
-	{ (key)KBD_DOWN, cursor_down 	},
-	{ (key)KBD_PAGE_DOWN, page_down	},
-	{ (key)KBD_PAGE_UP, page_up		},
-	{ (key)KBD_HOME, key_home		},
-	{ (key)KBD_END, key_end		}
+	{ KBD_UP, cursor_up	 	},
+	{ KBD_DOWN, cursor_down 	},
+	{ KBD_PAGE_DOWN, page_down	},
+	{ KBD_PAGE_UP, page_up		},
+	{ KBD_HOME, key_home		},
+	{ KBD_END, key_end		}
 };  
 
 /*
@@ -83,9 +81,9 @@ static void periodic(void)
 {
 	check_wtmp();
 	update_load();		
-	g_current->periodic();
-	wnoutrefresh(g_main_win);
-	wnoutrefresh(g_info_win.wd);
+	current->periodic();
+	wnoutrefresh(main_win);
+	wnoutrefresh(info_win.wd);
 	sub_periodic();
 	menu_refresh();
 	box_refresh();
@@ -105,9 +103,9 @@ void send_signal(int sig, pid_t pid)
 		sprintf(buf,"Can't send signal %d to process %d",
 			sig, pid); 
 	else sprintf(buf,"Signal %d was sent to process %d",sig, pid);
-	werase(g_help_win.wd);
-	echo_line(&g_help_win, buf, 0);
-	wnoutrefresh(g_help_win.wd);
+	werase(help_win.wd);
+	echo_line(&help_win, buf, 0);
+	wnoutrefresh(help_win.wd);
 }
 
 void m_search(void);
@@ -115,32 +113,32 @@ void help(void);
 
 static void key_action(int key)
 {
-	int size;
-	if (signal_sent) {
-		print_help();
-		signal_sent = 0;
+	int i, size;
+	if(signal_sent) {
+	    print_help();
+	    signal_sent = 0;
 	}
 	/* 
 	 * First, try to process the key by object (subwindow, menu) that
 	 * could be on top.
 	 */
 	size = sizeof key_funct/sizeof(int (*)(int));
-	for (int i = 0; i < size; i++)
+	for(i = 0; i < size; i++)
 		if(key_funct[i](key)) goto SKIP; 
 	
-	if(g_current->keys(key)) goto SKIP;
+	if(current->keys(key)) goto SKIP;
 	/* cursor movement */
 	size = sizeof key_handlers/sizeof(struct key_handler);
-	for (int i = 0; i < size; i++) 
-		if (key_handlers[i].c == key) {
-			key_handlers[i].handler(g_current);
-			if (can_draw()) pad_draw();
+	for(i = 0; i < size; i++) 
+		if(key_handlers[i].c == key) {
+			key_handlers[i].handler(current);
+			if(can_draw()) pad_draw();
 			goto SKIP;
 		}
 	switch(key) {
 	case 'c':
-		g_full_cmd = !g_full_cmd;
-		g_current->redraw();
+		full_cmd ^= 1;
+		current->redraw();
 		break;
 	case '/':
 		m_search();
@@ -151,13 +149,13 @@ static void key_action(int key)
 	case KBD_ESC:
 	case 'q':
 		curses_end();
-	        exit(0);
+		exit(0);
 	default: return;
 	}
 SKIP:
 	dolog("%s: doing refresh\n", __FUNCTION__);
-	wnoutrefresh(g_main_win);
-	wnoutrefresh(g_info_win.wd);
+	wnoutrefresh(main_win);
+	wnoutrefresh(info_win.wd);
 	pad_refresh();
 	menu_refresh();
 	box_refresh();
@@ -176,7 +174,7 @@ static void get_rows_cols(int *y, int *x)
 	prg_exit("get_row_cols(): ioctl error: cannot read screen size.");
 }								
 
-static void winch_handler (int unused)
+static void winch_handler()
 {
 	size_changed++;
 }
@@ -187,19 +185,19 @@ static void winch_handler (int unused)
  */
 static void resize(void)
 {
-	get_rows_cols(&g_screen_rows, &g_screen_cols);
-	resizeterm(g_screen_rows, g_screen_cols);
-	wresize(g_main_win, g_screen_rows-3, g_screen_cols);
+	get_rows_cols(&screen_rows, &screen_cols);
+	resizeterm(screen_rows, screen_cols);
+	wresize(main_win, screen_rows-3, screen_cols);
 	win_init();
-	mvwin(g_help_win.wd, g_screen_rows - 1, 0);	
+	mvwin(help_win.wd, screen_rows - 1, 0);	
 //	wnoutrefresh(help_win.wd);
 //	wnoutrefresh(info_win.wd);
 	/* set the cursor position if necessary */
-	if(g_current->cursor > g_current->rows)
-		g_current->cursor = g_current->rows; 
-	werase(g_main_win);
-	g_current->redraw();
-	wnoutrefresh(g_main_win);                                             
+	if(current->cursor > current->rows)
+		current->cursor = current->rows; 
+	werase(main_win);
+	current->redraw();
+	wnoutrefresh(main_win);                                             
 	print_help();
 	pad_resize();
 	print_info();
@@ -211,7 +209,7 @@ static void resize(void)
 	size_changed = 0;
 }
 
-static void int_handler (int unused)
+static void int_handler()
 {
 	curses_end();
 	exit(0);
@@ -232,14 +230,14 @@ int main (int argc, char **argv)
 	}
 #endif
 	get_boot_time();
-	get_rows_cols(&g_screen_rows, &g_screen_cols);
-	g_buf_size = g_screen_cols + g_screen_cols/2;
-	g_line_buf = (char*)malloc(g_buf_size);
-	if (!g_line_buf)
+	get_rows_cols(&screen_rows, &screen_cols);
+	buf_size = screen_cols + screen_cols/2;
+	line_buf = malloc(buf_size);
+	if (!line_buf)
 		errx(1, "Cannot allocate memory for buffer.");
 
 	curses_init();
-	g_current = &g_users_list;
+	current = &users_list;
 	users_init();
 	procwin_init();
 	subwin_init();
@@ -250,10 +248,10 @@ int main (int argc, char **argv)
 
 	print_help();
 	update_load();
-	g_current->redraw();
-	wnoutrefresh(g_main_win);
-	wnoutrefresh(g_info_win.wd);
-	wnoutrefresh(g_help_win.wd);
+	current->redraw();
+	wnoutrefresh(main_win);
+	wnoutrefresh(info_win.wd);
+	wnoutrefresh(help_win.wd);
 	doupdate();
 	
 	tv.tv_sec = TIMEOUT;
@@ -276,7 +274,7 @@ int main (int argc, char **argv)
 			key_action(key);
 		}
 		if (!tv.tv_sec && !tv.tv_usec){
-			g_ticks++;
+			ticks++;
 			periodic();
 			tv.tv_sec = TIMEOUT;
 		}
@@ -290,7 +288,7 @@ int main (int argc, char **argv)
 			key_action(key);
 		}
 		if(tv.tv_sec <= 0) {
-			g_ticks++;
+			ticks++;
 			periodic();
 			tv.tv_sec = TIMEOUT;
 
@@ -298,11 +296,4 @@ int main (int argc, char **argv)
 #endif
 		if (size_changed) resize();
 	}
-}
-
-std::string int_to_string (int x)
-{
-  std::ostringstream os;
-  os << x;
-  return os.str();
 }

@@ -5,9 +5,6 @@
  * needed, in FreeBSD and OpenBSD sysctl() is used (which
  * gives better performance)
  */
-
-#include <sstream>
-#include <string>
 #include <err.h>
 #include <time.h>
 #include "pluglib.h"
@@ -31,19 +28,12 @@ static inline char *_read_link(const char *path)
 	return buf;
 }
 
-static void read_link (int pid, const char *name)
+static void read_link(int pid, char *name)
 {
-	std::string s;
-
 	char *v;
-
-	{
-		std::ostringstream os;
-		os << "/proc/" << pid << '/' << name;
-		s = os.str();
-	}
-
-	v = _read_link(s.c_str());
+	char pbuf[32];
+	snprintf(pbuf, sizeof pbuf, "/proc/%d/%s", pid, name); 
+	v = _read_link(pbuf);
 	if(!v) {
 		no_info();
 		return;
@@ -51,6 +41,9 @@ static void read_link (int pid, const char *name)
 	println(v);
 }
 
+#if 0
+static int used;	/* unused */
+#endif
 struct netconn_t {
 	struct list_head n_list;
 	struct list_head n_hash;
@@ -132,8 +125,9 @@ static struct netconn_t *tcp_find(unsigned int inode, struct list_head *head)
 static struct netconn_t *new_netconn(unsigned int inode, struct netconn_t *src)
 {
 	struct netconn_t *t = 0;
-	t = (netconn_t*)get_empty(sizeof *t, &tcp_blocks);
+	t = get_empty(sizeof *t, &tcp_blocks);
 	memcpy(t, src, sizeof *t);
+//	t->used = 1;
 	t->inode = inode;
 	add_to_hash(t, inode);
 	list_add(&t->n_list, &tcp_l);
@@ -144,32 +138,27 @@ static struct netconn_t *new_netconn(unsigned int inode, struct netconn_t *src)
 static struct netconn_t *validate(unsigned int inode, char *s)
 {
 	struct netconn_t t, *tmp;
-	int offset =
-		2 * sizeof(struct list_head) + sizeof(int) + sizeof(short);
-	bzero(&t, sizeof(t));
-	int i = sscanf(s, "%x:%x %x:%x %x", &t.s_addr, &t.s_port, 
+	int i, offset = 2 * sizeof(struct list_head) + sizeof(int) + sizeof(short);
+bzero(&t, sizeof(t));
+	i = sscanf(s, "%x:%x %x:%x %x", &t.s_addr, &t.s_port, 
 			&t.d_addr, &t.d_port, &t.state);
-	if (i != 5) return 0;
+	if(i != 5) return 0;
 	// dolog("%s: entering\n", __FUNCTION__);	
 	tmp = tcp_find(inode, tcp_hashtable);
-	if (!tmp) {
-		// dolog("%s: %d %d %d not found\n",
-                //       __FUNCTION__, inode, t.s_port, t.d_port);
+	if(!tmp) {
+	// dolog("%s: %d %d %d not found\n", __FUNCTION__, inode, t.s_port, t.d_port);
 
 		tmp =  new_netconn(inode, &t);		
 		return tmp;
 	}	
-
-	if (!memcmp((char*)&t + offset,
-		    (char*)tmp + offset, sizeof(t) - offset)) {
+//	t.used = tmp->used = 0;
+	if(!memcmp((char*)&t + offset,(char*)tmp + offset, sizeof(t) - offset)) {
 		dolog("%s: %d %d %d %s found, not changed\n",
-		      __FUNCTION__, inode, t.s_port, t.d_port,
-		      tcp_state[t.state-1]);	
+			__FUNCTION__, inode, t.s_port, t.d_port, tcp_state[t.state-1]);	
 		return tmp; 
 	}
 	dolog("%s: %d %d->%d %d->%d found,changed\n",
-	      __FUNCTION__, inode, t.s_port, t.d_port, tmp->s_port,
-	      tmp->d_port);	
+		__FUNCTION__, inode, t.s_port, t.d_port, tmp->s_port, tmp->d_port);	
 	memcpy((char*)&t + offset, (char*)tmp + offset, sizeof(t) - offset);
 /*
 	tmp->s_addr = t.s_addr;	
@@ -226,20 +215,13 @@ static void read_tcp_conn(void)
  */
 static void print_net_conn(struct netconn_t *t)
 {
-	std::string buf;
-
-	{
-		std::ostringstream os;
-		os << inet_ntoa(*((struct in_addr*) &t->s_addr))
-		   << ':' << t->s_port;
-		buf = os.str();
-	}
-
+	char buf[64];
+	snprintf(buf, sizeof buf, "%s:%d", inet_ntoa(*((struct in_addr*) &t->s_addr)),
+		t->s_port);
 	boldon();
-	print (buf.c_str());
-	if (t->d_addr) 
-		print(" -> %s:%d",
-		      inet_ntoa(*((struct in_addr*)&t->d_addr)), t->d_port);
+	print(buf);
+	if(t->d_addr) 
+		print(" -> %s:%d", inet_ntoa(*((struct in_addr*)&t->d_addr)), t->d_port);
 	print(" %s", tcp_state[t->state-1]);
 	boldoff();
 }
@@ -279,43 +261,31 @@ static void del_conn(void)
  * to update stored TCP connections. Don't do it too often, because
  * it can generate load (/proc/net/tcp can be quite large).
  */
-void open_fds(int pid, const char *name)
+void open_fds(int pid, char *name)
 {
-	std::string buf;
-
 	DIR *d;
 	char *s;
-
+	char buf[32];
 	struct dirent *dn;
 	static long long count = 0;
-
-	{
-		std::ostringstream os;
-		os << "/proc/" << pid << "/fd";
-		buf = os.str();
-	}
-
-	d = opendir(buf.c_str());
+	snprintf(buf, sizeof buf, "/proc/%d/fd", pid);
+	d = opendir(buf);
 	if(!d) {
 		no_info();
 		return;
 	}
-	if(!count || g_ticks - count >= 2) {
+	if(!count || ticks - count >= 2) {
 	// write(1, "\a", 1);	
-	// dolog("%s reading tcp conn %d %d\n", __FUNCTION__, g_ticks, g_ticks%2);	
+	// dolog("%s reading tcp conn %d %d\n", __FUNCTION__, ticks, ticks%2);	
 	read_tcp_conn();
-	count = g_ticks;
+	count = ticks;
 
 	}	
 	while((dn = readdir(d))) {
 		if(dn->d_name[0] == '.') continue;
 		print("%s - ", dn->d_name);
-		{
-			std::ostringstream os;
-			os << "/proc/" << pid << "/fd/" << dn->d_name;
-			buf = os.str();
-		}
-		s = _read_link(buf.c_str());
+		snprintf(buf, sizeof buf, "/proc/%d/fd/%s", pid, dn->d_name);
+		s = _read_link(buf);
 		if(!s) no_info();
 		else {
 			if(!strncmp("socket:[", s, 8) && show_net_conn(s+8));
@@ -355,7 +325,7 @@ FOUND:
 	return c;
 }	
 
-static void read_proc_file (const char *name, char *start, char *end)
+static void read_proc_file(char *name, char *start, char *end)
 {
 	char buf[128];
 	int ok = 0;
@@ -382,17 +352,11 @@ END:
 	fclose(f);
 }	
 
-static void read_meminfo(int pid, const char *name)
+static void read_meminfo(int pid, char *name)
 {
-	std::string filename;
-
-	{
-		std::ostringstream os;
-		os << "/proc/" << pid << "/status";
-		filename = os.str();
-	}
-	
-	read_proc_file (filename.c_str(), "Uid", "VmLib");
+	char buf[32];
+	snprintf(buf, sizeof buf, "/proc/%d/status", pid);
+	read_proc_file(buf, "Uid", "VmLib");
 }
 
 #define START_TIME_POS	21
@@ -431,7 +395,8 @@ void get_boot_time(void)
 	FILE *f;
 	unsigned long c;
 	int i = 0;
-	f = fopen("/proc/stat", "r");
+	snprintf(buf, sizeof buf, "/proc/stat");
+	f = fopen(buf, "r");
 	if(!f) return;
 	while(fgets(buf, sizeof buf, f)) {
 		if(i == ' ') c++;
@@ -448,7 +413,7 @@ FOUND:
 
 #include <asm/param.h>	// for HZ
 
-static void proc_starttime(int pid, const char *name)
+static void proc_starttime(int pid, char *name)
 {
 	unsigned long i, sec;
 	char *s;
@@ -464,7 +429,7 @@ static void proc_starttime(int pid, const char *name)
 
 struct proc_detail_t {
         char *title;             /* title of a particular information	*/
-        void (* fn)(int pid, const char *name);  
+        void (* fn)(int pid, char *name);  
 	int t_lines;		/* nr of line for a title		*/    
 	char *name;		/* used only to read links		*/
 };
@@ -481,10 +446,11 @@ struct proc_detail_t proc_details_t[] = {
 
 void builtin_proc_draw(void *p)
 {
+        int i;
 	int pid = *(int*)p;
         struct proc_detail_t *t;
         int size = sizeof proc_details_t / sizeof(struct proc_detail_t);
-	for (int i = 0; i < size; i++) {
+	for(i = 0; i < size; i++) {
                 t = &proc_details_t[i];
 		title("%s", t->title);
 		newln();
@@ -515,8 +481,9 @@ static int fill_cpu_info(void)
 	char buf[64];
 	FILE *f;
 	struct cpu_info_t *tmp;
-
-	f = fopen("/proc/stat", "r");
+	int i = 0;
+	snprintf(buf, sizeof buf, "/proc/stat");
+	f = fopen(buf, "r");
 	if(!f) return -1;
 	while(fgets(buf, sizeof buf, f)) 
 		if(!strncmp(buf, "cpu  ", 5)) goto FOUND;
@@ -526,8 +493,8 @@ FOUND:
 	tmp = prev_cpu_info;
 	prev_cpu_info = cur_cpu_info;
 	cur_cpu_info = tmp;
-	int i = sscanf(buf+5, "%lld %lld %lld %lld", &tmp->u_mode, &tmp->nice,
-		       &tmp->s_mode, &tmp->idle);
+	i = sscanf(buf+5, "%lld %lld %lld %lld", &tmp->u_mode, &tmp->nice,
+		&tmp->s_mode, &tmp->idle);
 	fclose(f);
 	if(i != 4) return -1;
 	eff_info.u_mode = cur_cpu_info->u_mode - prev_cpu_info->u_mode;

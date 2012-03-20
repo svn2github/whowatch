@@ -7,10 +7,10 @@ void println(const char *t, ...)
         va_list ap;
         va_start(ap, t);
         vsnprintf(buf, sizeof buf, t, ap);
-	waddstr(g_main_pad->wd, buf);
+	waddstr(main_pad->wd, buf);
         va_end(ap);
-	waddstr(g_main_pad->wd, "\n");
-	g_sub_current->lines++;
+	waddstr(main_pad->wd, "\n");
+	sub_current->lines++;
 }
 
 void print(const char *t, ...)
@@ -19,24 +19,24 @@ void print(const char *t, ...)
         va_list ap;
         va_start(ap, t);
         vsnprintf(buf, sizeof buf, t, ap);
-	waddstr(g_main_pad->wd, buf);
+	waddstr(main_pad->wd, buf);
         va_end(ap);
 }
 
 void newln(void)
 {
 //	waddstr(main_pad->wd, "\n");
-	g_sub_current->lines++;
+	sub_current->lines++;
 }
 
 void boldon(void)
 {
-	wattrset(g_main_pad->wd, A_BOLD);
+	wattrset(main_pad->wd, A_BOLD);
 }
 
 void boldoff(void)
 {
-	wattrset(g_main_pad->wd, A_NORMAL);
+	wattrset(main_pad->wd, A_NORMAL);
 }
 
 void title(const char *t, ...)
@@ -46,7 +46,7 @@ void title(const char *t, ...)
 	boldon();
         va_start(ap, t);
         vsnprintf(buf, sizeof buf, t, ap);
-	waddstr(g_main_pad->wd, buf);
+	waddstr(main_pad->wd, buf);
         va_end(ap);
 	boldoff();
 }
