@@ -90,7 +90,7 @@ void curses_init()
 	/* meta(stdscr, FALSE); */
 	scrollok(main_win, TRUE);
         noecho();
-	term_raw();
+	//term_raw();
 }				
 
 void curses_end()

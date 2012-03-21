@@ -198,8 +198,4 @@ int reg_match(const char *);
 void set_search(char *);
 
 /* kbd.c */
-int getkey();
 int read_key ();
-
-/* term.c */
-void term_raw();

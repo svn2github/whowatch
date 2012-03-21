@@ -330,33 +330,6 @@ static void read_meminfo(int pid, char *name)
 	read_proc_file(buf, "Uid", "VmLib");
 }
 
-#define START_TIME_POS	21
-/*
- * Returns time the process  
- * started (in jiffies) after system boot.
- */
-static unsigned long p_start_time(int pid)
-{
-	char buf[32];
-	FILE *f;
-	int i;
-	unsigned long  c = 0;
-	snprintf(buf, sizeof buf, "/proc/%d/stat", pid);
-	f = fopen(buf, "r");
-	if(!f) return -1;
-	while((i = fgetc(f)) != EOF) {
-		if(i == ' ') c++;
-		if(c == START_TIME_POS) goto FOUND;
-	}
-	fclose(f);
-	return -1;
-FOUND:
-	i = fscanf(f, "%ld", &c);
-	fclose(f);
-	if(i != 1) return -1;
-	return c;
-}		
-
 static time_t boot_time;
 
 void get_boot_time(void)
@@ -381,20 +354,9 @@ FOUND:
 	boot_time = (time_t) c;
 }		
 
-#include <asm/param.h>	// for HZ
-
 static void proc_starttime(int pid, char *name)
 {
-	unsigned long i, sec;
-	char *s;
-	i = p_start_time(pid);
-	if(i == -1 || !boot_time) {
-		no_info();
-		return;
-	}
-	sec = boot_time + i/HZ;
-	s = ctime(&sec);
-	print("%s", s);
+        no_info();
 }
 
 struct proc_detail_t {
