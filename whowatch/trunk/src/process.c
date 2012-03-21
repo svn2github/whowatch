@@ -125,16 +125,17 @@ static char *prepare_line(struct process *p)
 	if (!p) return 0;
 	tree = tree_string(tree_root, p->proc);
 	get_state(p);
-	if(show_owner) 
+	if (show_owner) {
 		snprintf(line_buf, buf_size,"\x3%5d %c%c \x3%-8s \x2%s \x3%s", 
 			p->proc->pid, get_state_color(p->state), 
 			p->state, get_owner_name(p->uid), tree, 
 			get_cmdline(p->proc->pid));
-	else 
+	}
+	else {
 		snprintf(line_buf, buf_size,"\x3%5d %c%c \x2%s \x3%s", 
 			p->proc->pid, get_state_color(p->state), 
 			p->state, tree, get_cmdline(p->proc->pid));
-		
+	}	
 	return line_buf;
 }
 
@@ -269,28 +270,29 @@ void do_signal(int sig, int pid)
 	pad_draw();
 }
 
-static int signal_keys(int key)
+static bool signal_keys (int key)
 {
         int signal = 0;
 
-	if(!(key&KBD_CTRL)) return KEY_SKIPPED;
-	key &= KBD_MASK;
-	dolog("%s: %x %x\n", __FUNCTION__, key, 'H');	
-
 	switch(key) {
-	case 'K': signal = 9; break;
-	case 'U': signal = 1; break;
-	case 'T': signal = 15; break;
+	case KEY_CTRL_K: signal = 9; break;
+	case KEY_CTRL_U: signal = 1; break;
+	case KEY_CTRL_T: signal = 15; break;
 	}
-	if(signal) do_signal(signal, cursor_pid());
-	return KEY_HANDLED;
+	if (signal) { 
+	  dolog("%s: %x %x\n", __FUNCTION__, key, 'H');	
+	  do_signal(signal, cursor_pid());
+	  return KEY_HANDLED;
+	}
+
+	return KEY_SKIPPED;
 }	
 
-static int proc_key(int key)
+static bool proc_key (int key)
 {
 	if(signal_keys(key)) return KEY_HANDLED;
         switch(key) {
-        case ENTER:
+        case KEY_ENTER:
                 werase(main_win);
                 current = &users_list;
 		print_help();

@@ -1,3 +1,5 @@
+- use ncurses for keyboard input
+
 version 1.6.1
 -------------
 - imported source from the debian package (1.6.0a)

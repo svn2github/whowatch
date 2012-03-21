@@ -293,13 +293,13 @@ static void cmdline(void)
 }
 
 
-static int ulist_key(int key)
+static bool ulist_key(int key)
 {
 	struct user_t *u = 0;
 	pid_t pid = INIT_PID;
 	
         switch(key) {
-        case KBD_ENTER:
+        case KEY_ENTER:
 		u = cursor_user();
 		if(u) pid = u->pid; 
         case 't':
@@ -315,9 +315,9 @@ static int ulist_key(int key)
                 toggle ^= 1;
                 cmdline();
                 break;
-        default: return 0;
+        default:
+	        return KEY_SKIPPED;
         }
-	return 1;
 }
 
 static void periodic(void)

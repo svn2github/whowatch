@@ -271,37 +271,37 @@ static int submenu_show(void)
 }
 
 
-int menu_keys(int key)
+bool menu_keys(int key)
 {
-	if(key == KBD_F9) {
+        if(key == KEY_F(9)) {
 		if(!menu.wd) menu_create();
 		else menu_destroy();
-		return 1;
+		return KEY_HANDLED;
 	}
-	if(!menu.wd) return 0;
+	if(!menu.wd) return KEY_SKIPPED;
 	dolog("%s: submenu_wd %p\n", __FUNCTION__, submenu_wd);	
 	switch(key) {
-	case KBD_ESC:
+	case KEY_ESC:
 		menu_destroy();
 		break;
-	case KBD_RIGHT:
+	case KEY_RIGHT:
 		change_submenu(cur_submenu->l_menu.prev);
 		break;
-	case KBD_LEFT:
+	case KEY_LEFT:
 		change_submenu(cur_submenu->l_menu.next);
 		break;
-	case KBD_DOWN:
-		if(!submenu_show()) return 1; 
+	case KEY_DOWN:
+		if(!submenu_show()) return KEY_HANDLED; 
 		if(change_item(cur_item->l_submenu.prev))
 			highlight_item(cur_submenu, 1);
 		dolog("%s: cur item %s\n", __FUNCTION__, cur_item->name);
 		break;	
-	case KBD_UP:
-		if(!submenu_show()) return 1; 
+	case KEY_UP:
+		if(!submenu_show()) return KEY_HANDLED; 
 		if(change_item(cur_item->l_submenu.next))
 			highlight_item(cur_submenu, -1);
 		break;
-	case KBD_ENTER:
+	case KEY_ENTER:
 		if(cur_item) {
 			if(cur_item->hook) cur_item->hook();
 			menu_destroy();

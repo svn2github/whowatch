@@ -86,12 +86,12 @@ void info_box(char *t, char *i)
 	box_create();
 }
 
-int info_box_keys(int key)
+bool info_box_keys (int key)
 {
-	if(!_box.wd) return 0;
+	if(!_box.wd) return KEY_SKIPPED;
 	delwin(_box.wd);
 	redrawwin(main_win);
 	_box.wd = 0;
-	return 1;
+	return KEY_HANDLED;
 }
 

@@ -76,12 +76,18 @@ void curses_init()
 	wbkgd(users_list.wd, COLOR_PAIR(3)); 
 	wbkgd(help_win.wd, COLOR_PAIR(3)); 
 	wbkgd(info_win.wd, COLOR_PAIR(3)); 
+
 	cbreak();
-/*
-        nodelay(stdscr,TRUE);
-	keypad(stdscr, FALSE);
-	meta(stdscr, FALSE);
-*/
+        nodelay (stdscr, TRUE);
+        nodelay (users_list.wd, TRUE);
+        nodelay (help_win.wd, TRUE);
+        nodelay (info_win.wd, TRUE);
+	keypad (stdscr, TRUE);
+        keypad (users_list.wd, TRUE);
+        keypad (help_win.wd, TRUE);
+        keypad (info_win.wd, TRUE);
+	set_escdelay (10);
+	/* meta(stdscr, FALSE); */
 	scrollok(main_win, TRUE);
         noecho();
 	term_raw();

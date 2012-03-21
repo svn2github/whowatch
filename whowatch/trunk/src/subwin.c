@@ -50,7 +50,7 @@ static struct signal_t signals[] = {
  * differently. 'y' key is used to accept sending selected
  * signal.
  */
-static int handle_arrow(int key)
+static bool handle_arrow(int key)
 {
 assert(sub_current);
 assert(main_pad);
@@ -82,7 +82,7 @@ assert(main_pad->wd);
 	return KEY_HANDLED;
 }
 
-static int keys_inside(int key)
+static bool keys_inside(int key)
 {
 assert(sub_current);
 assert(main_pad);
@@ -96,11 +96,11 @@ assert(main_pad);
 	case 'a':
 		if(sub_current->offset) sub_current->offset--;
 		break;
-	case KBD_RIGHT:
+	case KEY_RIGHT:
 		if(SUBWIN_COLS - sub_current->xoffset > main_pad->size_x - PAD_X + 1) 
 			 sub_current->xoffset++;
 		break;
-	case KBD_LEFT:
+	case KEY_LEFT:
 		if(sub_current->xoffset) sub_current->xoffset--;
 		break;
 	default: return KEY_SKIPPED;
@@ -420,7 +420,7 @@ void subwin_init(void)
 	
 }
 
-int sub_keys(int key)
+bool sub_keys(int key)
 {
 	if(keys_inside(key)) return KEY_HANDLED;
 	switch(key) {
@@ -439,7 +439,7 @@ int sub_keys(int key)
 		sub_current = &sub_main;
 		break;
 	case 'q':
-	case KBD_ESC:
+	case KEY_ESC:
 		if(main_pad->wd) {
 			pad_destroy();
 			return KEY_HANDLED;

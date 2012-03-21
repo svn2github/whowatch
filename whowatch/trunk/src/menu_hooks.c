@@ -19,17 +19,17 @@ void m_details(void)
 
 void m_kill(void)
 {
-	current->keys('K' | KBD_CTRL);
+	current->keys(KEY_CTRL_K);
 }
 
 void m_hup(void)
 {
-	current->keys('U' | KBD_CTRL);
+	current->keys(KEY_CTRL_U);
 }
 
 void m_term(void)
 {
-	current->keys('T' | KBD_CTRL);
+	current->keys(KEY_CTRL_T);
 }
 
 void m_sysinfo(void)
@@ -62,7 +62,7 @@ void m_long(void)
 
 void m_switch(void)
 {
-	current->keys(KBD_ENTER);
+	current->keys(KEY_ENTER);
 }
 
 void m_idle(void)

@@ -118,8 +118,9 @@ static inline struct proc_t* new_proc(int n)
 {
 	struct proc_t* p = cache;
 	cache = 0;
-	if(!p)
+	if (!p) {
 		p = (struct proc_t*) malloc(sizeof *p);
+	}
 	memset(p,0,sizeof *p);
 	p->pid = n;
 
@@ -134,20 +135,24 @@ static struct proc_t *validate_proc(int pid)
 	struct proc_t* p;
 
 	p = find_by_pid(pid);
-	if(pid <= 1)
+	if (pid <= 1) {
 		return p;
-	if(p)
+	}
+	if (p) {
 		list_del(p,mlist);
-	else
+	}
+	else {
 		p = new_proc(pid);
+	}
 	list_add(main_list,p,mlist);
 	return p;
 }
 
 static inline void change_parent(struct proc_t* p,struct proc_t* q)
 {
-	if(is_on_list(p,broth))
+	if (is_on_list(p,broth)) {
 		list_del(p,broth);
+	}
 	list_add(q->child,p,broth);
 	p->parent = q;
 }
@@ -181,7 +186,7 @@ int update_tree(void del(void*))
 		p = validate_proc(info.pid);
 		q = validate_proc(info.ppid);
 #endif
-		if(p->parent != q){
+		if (p->parent != q) {
 			if(p->priv) del(p->priv);
 
 			change_parent(p,q);
@@ -195,10 +200,12 @@ int update_tree(void del(void*))
 	n = num_proc - n;
 
 	for(p = old_list; p; p=q) {
-		while(p->child)
+		while (p->child) {
 			change_parent(p->child,&proc_init);
-		if(is_on_list(p,broth))
+		}
+		if (is_on_list(p,broth)) {
 			list_del(p,broth);
+		}
 		q = p->mlist.nx;
 		if(p->priv) del(p->priv);
 		remove_proc(p);
@@ -224,9 +231,10 @@ struct proc_t* tree_start(int root_pid, int start_pid)
 
 struct proc_t* tree_next()
 {
-	if(proc->child)
+	if (proc->child) {
 		proc = proc->child;
-	else
+	}
+	else {
 		for(;; proc = proc->parent) {
 			if(proc == root)
 				proc = 0;
@@ -236,6 +244,7 @@ struct proc_t* tree_next()
 				continue;
 			break;
 		}
+	}
 	return proc;
 }
 

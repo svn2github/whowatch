@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <errno.h>
 #include <err.h>
@@ -20,14 +21,11 @@
 #define NORMAL_COLOR	A_NORMAL
 #define CMD_COLUMN	52
 
-#define KEY_SKIPPED	0
-#define KEY_HANDLED	1
+#define KEY_SKIPPED	false
+#define KEY_HANDLED	true
 
 #define INIT_PID		1
 #define real_line_nr(x,y)	((x) - (y)->offset)
-
-enum key { ENTER=0x100, UP, DOWN, LEFT, RIGHT, DELETE, ESC, CTRL_K,                      
-                CTRL_I, PG_DOWN, PG_UP, HOME, END, BACKSPACE, TAB };
 
 extern FILE *debug_file;
 extern int screen_rows, screen_cols;
@@ -52,7 +50,7 @@ struct window
 	int cursor;		/* cursor position		 	*/
 	WINDOW *wd;		/* curses window pointer		*/
 	char *(*giveme_line) (int line);
-	int (*keys)(int c);	/* keys handling 			*/
+	bool (*keys)(int c);	/* keys handling 			*/
 	void (*periodic)(void);	/* periodic updates of window's data 	*/
 	void (*redraw)(void);	/* refreshes window content		*/
 };
@@ -154,7 +152,7 @@ int free_entry(void *, int, struct list_head *);
 void dolog(const char *, ...);
 
 /* subwin.c */
-int sub_keys(int);
+bool sub_keys(int);
 void subwin_init(void);
 void sub_periodic(void);
 void pad_refresh(void);
@@ -167,20 +165,20 @@ void sub_switch(void);
 
 
 /* input_box.c */
-int box_keys(int);
+bool box_keys(int);
 void box_refresh(void);
 void box_resize(void);
 void input_box(char *, char *, char *,void (*)(char *));
 
 /* menu.c */
 void menu_refresh(void);
-int menu_keys(int);
+bool menu_keys(int);
 void menu_init(void);
 void menu_resize(void);
 
 /* info_box.c */
 void info_box(char *, char *);
-int info_box_keys(int);
+bool info_box_keys(int);
 void info_refresh(void);
 void info_resize(void);
 

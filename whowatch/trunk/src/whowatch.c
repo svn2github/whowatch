@@ -21,10 +21,8 @@ int screen_cols;	/* screen cols returned by ioctl		*/
 char *line_buf;		/* global buffer for line printing		*/
 int buf_size;		/* allocated buffer size			*/
 
-//enum key { ENTER=KEY_MAX + 1, ESC, CTRL_K, CTRL_I };
-
 struct key_handler {
-	enum key c;
+        int key;
 	void (*handler)(struct window *);
 };
 
@@ -32,19 +30,19 @@ struct key_handler {
  * These are key bindings to handle cursor movement.
  */
 static struct key_handler key_handlers[] = {
-	{ KBD_UP, cursor_up	 	},
-	{ KBD_DOWN, cursor_down 	},
-	{ KBD_PAGE_DOWN, page_down	},
-	{ KBD_PAGE_UP, page_up		},
-	{ KBD_HOME, key_home		},
-	{ KBD_END, key_end		}
+	{ KEY_UP, cursor_up	 	},
+	{ KEY_DOWN, cursor_down 	},
+	{ KEY_NPAGE, page_down	},
+	{ KEY_PPAGE, page_up		},
+	{ KEY_HOME, key_home		},
+	{ KEY_END, key_end		}
 };  
 
 /*
  * Functions for key handling. They have to be called in proper order.
  * Function associated with object that is on top has to be called first.
  */
-static int (*key_funct[])(int) = {
+static bool (*key_funct[])(int) = {
 	info_box_keys,
 	box_keys,
 	menu_keys,
@@ -111,13 +109,14 @@ void send_signal(int sig, pid_t pid)
 void m_search(void);
 void help(void);
 
-static void key_action(int key)
+static void key_action (int key)
 {
 	int i, size;
 	if(signal_sent) {
 	    print_help();
 	    signal_sent = 0;
 	}
+
 	/* 
 	 * First, try to process the key by object (subwindow, menu) that
 	 * could be on top.
@@ -130,7 +129,7 @@ static void key_action(int key)
 	/* cursor movement */
 	size = sizeof key_handlers/sizeof(struct key_handler);
 	for(i = 0; i < size; i++) 
-		if(key_handlers[i].c == key) {
+		if(key_handlers[i].key == key) {
 			key_handlers[i].handler(current);
 			if(can_draw()) pad_draw();
 			goto SKIP;
@@ -143,10 +142,10 @@ static void key_action(int key)
 	case '/':
 		m_search();
 		break;			
-	case KBD_F1:
+	case KEY_F(1):
 		help();
 		break;
-	case KBD_ESC:
+	case KEY_ESC:
 	case 'q':
 		curses_end();
 		exit(0);
@@ -271,7 +270,7 @@ int main (int argc, char **argv)
 		retval = select(1, &rfds, 0, 0, &tv);
 		if(retval > 0) {
 			int key = read_key();
-			key_action(key);
+			if (key != ERR) key_action(key);
 		}
 		if (!tv.tv_sec && !tv.tv_usec){
 			ticks++;
@@ -285,7 +284,7 @@ int main (int argc, char **argv)
 		tv.tv_sec -= (after.tv_sec - before.tv_sec);
 		if(retval > 0) {
 			int key = read_key();
-			key_action(key);
+			if (key != ERR) key_action(key);
 		}
 		if(tv.tv_sec <= 0) {
 			ticks++;

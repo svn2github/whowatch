@@ -150,26 +150,26 @@ static void in_keys(int key)
 	int size = _in.cols + _box.size_x - _in.size_x;
 	
 	switch(key) {
-	case KBD_ENTER:
-	case KBD_ESC:
+	case KEY_ENTER:
+	case KEY_ESC:
 		delwin(_box.wd);
 		delwin(_in.wd);
 		redrawwin(main_win);
 		_box.wd = 0;
 		curs_set(0);
-		if(key == KBD_ENTER && call_back && 
+		if(key == KEY_ENTER && call_back && 
 			cur_button != CANCEL_BUTTON && pos) call_back(in);
 		pos = offset = 0;
 		bzero(in, sizeof in);
 		cur_button = INPUT_LINE;
 		break;
-	case KBD_BS:
+	case KEY_BACKSPACE:
 		if(!pos) break;
 		in[--pos] = 0;
 		mvwdelch(_in.wd, 0, pos);
 		if(offset) offset--;
 		break;
-	case KBD_TAB:
+	case KEY_TAB:
 		cur_button++;
 		if(cur_button > CANCEL_BUTTON) cur_button = INPUT_LINE;
 		buttons(cur_button);
@@ -184,11 +184,11 @@ static void in_keys(int key)
 }
 
 	
-int box_keys(int key)
+bool box_keys (int key)
 {
-	if(!_box.wd) return 0;	
-	in_keys(key);
-	return 1;	
+        if (!_box.wd) return KEY_SKIPPED;
+	in_keys (key);
+	return KEY_HANDLED;	
 }
 
 	
