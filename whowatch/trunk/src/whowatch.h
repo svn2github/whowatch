@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <utmp.h>
 #include <string.h>
 #include <signal.h>
 #include <sys/stat.h>
@@ -14,8 +13,11 @@
 #include <sys/ioctl.h>
 #include <curses.h>
 #include <assert.h>
+#include <utmpx.h>
 #include "list.h"
 #include "kbd.h"
+
+#define member_size(type, member) sizeof(((type *)0)->member)
 
 #define CURSOR_COLOR	A_REVERSE
 #define NORMAL_COLOR	A_NORMAL
@@ -57,13 +59,17 @@ struct window
 
 struct user_t
 {
-        struct list_head head;
-        char name[UT_NAMESIZE + 1];     /* login name                   */
-        char tty[UT_LINESIZE + 1];      /* tty                          */
-        int pid;                        /* pid of login shell           */
-        char parent[16];                /* login shell parent's name	*/
-        char host[UT_HOSTSIZE + 1];     /* 'from' host                  */
-        int line;                       /* line number                  */
+  struct list_head head;
+  char name[member_size(struct utmpx, ut_user) + 1];    /* login name   */
+  char tty[member_size(struct utmpx, ut_line) + 1];     /* tty          */
+  int pid;                              /* pid of login shell           */
+  char parent[16];                      /* login shell parent's name	*/
+#ifdef HAVE_STRUCT_UTMPX_UT_HOST
+  char host[member_size(struct utmpx, ut_host) + 1];
+#else
+  char host[1];
+#endif
+  int line;                             /* line number                  */
 };
 
 extern struct window users_list, proc_win, help_win, info_win;

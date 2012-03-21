@@ -33,7 +33,7 @@ AC_HEADER_DIRENT
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
 AC_CHECK_HEADERS(fcntl.h sys/ioctl.h sys/time.h unistd.h)
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h netinet/in.h stdlib.h string.h sys/ioctl.h sys/param.h sys/user.h sys/time.h termios.h unistd.h utmp.h curses.h])
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h netinet/in.h stdlib.h string.h sys/ioctl.h sys/param.h sys/user.h sys/time.h termios.h unistd.h utmpx.h curses.h paths.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -42,21 +42,14 @@ AC_TYPE_PID_T
 AC_STRUCT_ST_RDEV
 AC_HEADER_TIME
 AC_CHECK_MEMBERS([struct stat.st_rdev])
-AC_CHECK_MEMBERS([struct utmp.ut_pid, struct utmp.ut_name], [], [], [[
-#include <sys/types.h>
-#include <utmp.h>
-]])
-AC_CHECK_DECLS([USER_PROCESS, DEAD_PROCESS], [], [], [[
-#include <sys/types.h>
-#include <utmp.h>
-]])
+AC_CHECK_MEMBERS([struct utmpx.ut_host])
 
 # Checks for library functions.
 AC_PROG_GCC_TRADITIONAL
 AC_TYPE_SIGNAL
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
-AC_CHECK_FUNCS([bzero gettimeofday inet_ntoa isascii memset regcomp select strchr strerror strncasecmp strrchr getloadavg])
+AC_CHECK_FUNCS([bzero gettimeofday inet_ntoa isascii memset regcomp select strchr strerror strncasecmp strrchr getloadavg utmpname])
 
 AC_MSG_CHECKING([whether select() modifies the time value])
 AC_TRY_RUN([#include <sys/types.h>

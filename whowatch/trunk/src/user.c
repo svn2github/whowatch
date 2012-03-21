@@ -1,31 +1,18 @@
-#include "whowatch.h"
 #include "config.h"
-
-#ifndef UTMP_FILE
-#define UTMP_FILE 	"/var/run/utmp"
+#ifdef HAVE_PATHS_H
+#include <paths.h>
 #endif
 
-#ifndef WTMP_FILE
-#define WTMP_FILE 	"/var/log/wtmp"
-#endif
+#include "whowatch.h"
 
 #define LOGIN		1
 #define LOGOUT		-1		
 
-#ifdef HAVE_STRUCT_UTMP_UT_NAME
-#define ut_user ut_name
-#endif
-
 LIST_HEAD(users_l);
-static int wtmp_fd;
 static int toggle;	/* if 0 show cmd line else show idle time 	*/
 
 char *line_buf;		/* global buffer for line printing		*/
 int buf_size;		/* allocated buffer size			*/
-
-#ifdef HAVE_PROCESS_SYSCTL
-int get_login_pid(char *);
-#endif
 
 struct prot_t
 {
@@ -81,20 +68,18 @@ void update_line(int line)
 /* 
  * Create new user structure and fill it
  */
-struct user_t *alloc_user(struct utmp *entry)
+struct user_t *alloc_user(struct utmpx *entry)
 {
 	struct user_t *u;
 	int ppid;
 	u = calloc(1, sizeof *u);
 	if(!u) errx(1, "Cannot allocate memory.");
-	strncpy(u->name, entry->ut_user, UT_NAMESIZE);
-	strncpy(u->tty, entry->ut_line, UT_LINESIZE);
-	strncpy(u->host, entry->ut_host, UT_HOSTSIZE);
-#ifdef HAVE_STRUCT_UTMP_UT_PID
-	u->pid = entry->ut_pid;
-#else
-	u->pid = get_login_pid(u->tty);
+	strncpy (u->name, entry->ut_user, sizeof(entry->ut_user));
+	strncpy (u->tty, entry->ut_line, sizeof(entry->ut_line));
+#ifdef HAVE_STRUCT_UTMPX_UT_HOST
+	strncpy(u->host, entry->ut_host, sizeof(entry->ut_host));
 #endif
+	u->pid = entry->ut_pid;
  	if((ppid = get_ppid(u->pid)) == -1)
 		strncpy(u->parent, "can't access", sizeof u->parent);
 	else 	strncpy(u->parent, get_name(ppid), sizeof u->parent - 1);
@@ -103,7 +88,7 @@ struct user_t *alloc_user(struct utmp *entry)
 	return u;
 }
 
-static struct user_t* new_user(struct utmp *ut)
+static struct user_t* new_user(struct utmpx *ut)
 {
 	struct user_t *u;
 	u = alloc_user(ut);
@@ -142,24 +127,16 @@ void users_list_refresh(void)
 static void read_utmp(void)		
 {
 	int fd, i;
-	static struct utmp entry;
+	struct utmpx *entry;
 	struct user_t *u;
 	
-	if ((fd = open(UTMP_FILE ,O_RDONLY)) == -1){
-		curses_end();
-		errx(1, "Cannot open " UTMP_FILE);
+	while ((entry = getutxent()) != NULL) {
+	  if (entry->ut_type == USER_PROCESS) {
+	    u = new_user (entry);
+	    //		print_user(u);
+	  }
 	}
-	while((i = read(fd, &entry,sizeof entry)) > 0) {
-		if(i != sizeof entry) errx(1, "Error reading " UTMP_FILE );
-#ifdef HAVE_DECL_USER_PROCESS
-		if(entry.ut_type != USER_PROCESS) continue;
-#else
-		if(!entry.ut_name[0]) continue;
-#endif
-		u = new_user(&entry);
-//		print_user(u);
-	}
-	close(fd);
+
 //	wnoutrefresh(users_list.wd);
 	return;
 }
@@ -206,42 +183,31 @@ werase(info_win.wd);
 /*
  * Check wtmp for logouts or new logins
  */
-void check_wtmp(void)
+void check_wtmp (void)
 {
 	struct user_t *u;
 	struct list_head *h;
-	struct utmp entry;
+	struct utmpx *entry;
 	int i, show, changed;
 	show = changed = 0;
 	if(current == &users_list) show = 1;
-	while((i = read(wtmp_fd, &entry, sizeof entry)) > 0){ 
-		if (i < sizeof entry){
-			curses_end();
-			errx(1, "%s: error reading %s", __FUNCTION__, WTMP_FILE );
-		}
+	while ((entry = getutxent()) != NULL) {
 		/* user just logged in */
-#ifdef HAVE_DECL_USER_PROCESS
-		if(entry.ut_type == USER_PROCESS) {
-#else
-		if(entry.ut_user[0]) {
-#endif
-			u = new_user(&entry);
+		if (entry->ut_type == USER_PROCESS) {
+			u = new_user (entry);
 			changed = 1;
 			continue;
 		}
-#ifdef HAVE_DECL_DEAD_PROCESS
-		if(entry.ut_type != DEAD_PROCESS) continue;
-#else
-//		if(entry.ut_line[0]) continue;
-#endif
-	/* user just logged out */
-		list_for_each(h, &users_l) {
-			u = list_entry(h, struct user_t, head);
-			if(strncmp(u->tty, entry.ut_line, UT_LINESIZE)) 
-				continue;
-			del_user(u);	
-			changed = 1;
-			break;
+		if (entry->ut_type == DEAD_PROCESS) {
+		  /* user just logged out */
+		  list_for_each(h, &users_l) {
+		    u = list_entry(h, struct user_t, head);
+		    if(strncmp(u->tty, entry->ut_line, sizeof(entry->ut_line)))
+		      continue;
+		    del_user(u);	
+		    changed = 1;
+		    break;
+		  }
 		}
 	}
 	if(!changed) return;
@@ -327,17 +293,31 @@ static void periodic(void)
 
 void users_init(void)
 {
-        if((wtmp_fd = open(WTMP_FILE ,O_RDONLY)) == -1)
-                errx(1, "%s: cannot open %s, %s",
-			__FUNCTION__, WTMP_FILE, strerror(errno));
-        if(lseek(wtmp_fd, 0, SEEK_END) == -1)
-                errx(1, "%s: cannot seek in %s, %s",
-			__FUNCTION__, WTMP_FILE, strerror(errno));
 	users_list.giveme_line = users_list_giveline;
 	users_list.keys = ulist_key;
 	users_list.periodic = periodic;
 	users_list.redraw = users_list_refresh;
+
+	setutxent ();
 	read_utmp();
+	endutxent ();
+
+	// open wtmp database
+#ifdef HAVE_UTMPNAME
+	if (utmpname (_PATH_WTMP) == -1) {
+	  err(1, "%s: cannot open wtmp database",
+	      __FUNCTION__);
+	}
+#else
+	if (setutxdb (UTXDB_LOG, NULL) == -1) {
+	  err(1, "%s: cannot open wtmp database",
+	      __FUNCTION__);
+	}
+#endif
+	setutxent ();
+	// skip to end
+	while (getutxent()) ;
+
 	print_info();
 }
 

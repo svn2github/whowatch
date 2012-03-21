@@ -175,8 +175,8 @@ int update_tree(void del(void*))
 #ifdef HAVE_PROCESS_SYSCTL
 	el = get_all_info(&pi);
 	for(i = 0; i < el; i++) {
-		p = validate_proc(pi[i].kp_proc.p_pid);
-		q = validate_proc(pi[i].kp_eproc.e_ppid);
+		p = validate_proc(pi[i].ki_pid);
+		q = validate_proc(pi[i].ki_ppid);
 #else
 
 	d=opendir(PROCDIR);
