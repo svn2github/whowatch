@@ -78,17 +78,17 @@ void curses_init()
 	wbkgd(info_win.wd, COLOR_PAIR(3)); 
 
 	cbreak();
-        nodelay (stdscr, TRUE);
-        nodelay (users_list.wd, TRUE);
-        nodelay (help_win.wd, TRUE);
-        nodelay (info_win.wd, TRUE);
-	keypad (stdscr, TRUE);
-        keypad (users_list.wd, TRUE);
-        keypad (help_win.wd, TRUE);
-        keypad (info_win.wd, TRUE);
+        nodelay (stdscr, true);
+        nodelay (users_list.wd, true);
+        nodelay (help_win.wd, true);
+        nodelay (info_win.wd, true);
+	keypad (stdscr, true);
+        keypad (users_list.wd, true);
+        keypad (help_win.wd, true);
+        keypad (info_win.wd, true);
 	set_escdelay (10);
 	/* meta(stdscr, FALSE); */
-	scrollok(main_win, TRUE);
+	scrollok(main_win, true);
         noecho();
 	//term_raw();
 }				
@@ -195,37 +195,36 @@ int inline scr_line(int l, struct window *w)
 }
 
 /*
- * Returns -1 if a given data line number is above visible part of a
- * window, 1 if below, 0 if inside.
+ * Returns true if a given data line number is above or below the
+ * visible part of a window.
  */
-inline int outside(int l, struct window *w)
+inline bool outside (int l, struct window *w)
 {
-	if(l < w->offset) return -1;
-	return (l > w->offset + w->rows);
+  return (above (l, w) || below (l, w));
 }
 
-inline int below(int l, struct window *w)
+inline bool below (int l, struct window *w)
 {
-	return (outside(l, w) == 1);
+  return (l > w->offset + w->rows);
 }
 
-inline int above(int l, struct window *w)
+inline bool above (int l, struct window *w)
 {
-	return (outside(l, w) == -1);
+  return (l < w->offset);
 }
 
 /* 
- * Returns 1 if a given screen line is a last line of data.
+ * Returns true if a given screen line is a last line of data.
  */
-static inline int at_last(int line, struct window *w)
+static inline bool at_last(int line, struct window *w)
 {
 	return (line == w->d_lines - 1 - w->offset);
 }
 
 /* 
- * Returns 1 if line is at the end of window.
+ * Returns true if line is at the end of window.
  */
-static inline int at_end(int line, struct window *w)
+static inline bool at_end(int line, struct window *w)
 {
 	return (line == w->rows);
 }
@@ -240,7 +239,7 @@ int print_line(struct window *w, char *s, int line, int virtual)
 	/* line is below screen */
 //	if(below(line, w)) return 0;
 
-	if (!virtual) echo_line(w, s, r);
+	if (virtual == 0) echo_line(w, s, r);
 	
 	/* printed line is at the cursor position */
 	if (r == w->cursor && !virtual)

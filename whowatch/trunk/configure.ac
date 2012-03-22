@@ -33,7 +33,7 @@ AC_HEADER_DIRENT
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
 AC_CHECK_HEADERS(fcntl.h sys/ioctl.h sys/time.h unistd.h)
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h netinet/in.h stdlib.h string.h sys/ioctl.h sys/param.h sys/user.h sys/time.h termios.h unistd.h utmpx.h curses.h paths.h])
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h netinet/in.h stdlib.h string.h sys/ioctl.h sys/param.h sys/user.h sys/time.h termios.h unistd.h utmp.h utmpx.h curses.h paths.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST

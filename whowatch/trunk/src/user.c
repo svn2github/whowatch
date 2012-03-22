@@ -2,6 +2,9 @@
 #ifdef HAVE_PATHS_H
 #include <paths.h>
 #endif
+#ifdef HAVE_UTMP_H
+#include <utmp.h>
+#endif
 
 #include "whowatch.h"
 
@@ -9,7 +12,7 @@
 #define LOGOUT		-1		
 
 LIST_HEAD(users_l);
-static int toggle;	/* if 0 show cmd line else show idle time 	*/
+static bool toggle;	/* if false show cmd line else show idle time 	*/
 
 char *line_buf;		/* global buffer for line printing		*/
 int buf_size;		/* allocated buffer size			*/
@@ -126,7 +129,6 @@ void users_list_refresh(void)
  */
 static void read_utmp(void)		
 {
-	int fd, i;
 	struct utmpx *entry;
 	struct user_t *u;
 	
@@ -188,14 +190,15 @@ void check_wtmp (void)
 	struct user_t *u;
 	struct list_head *h;
 	struct utmpx *entry;
-	int i, show, changed;
-	show = changed = 0;
-	if(current == &users_list) show = 1;
+	bool show, changed;
+
+	show = (current == &users_list);
+	changed = false;
 	while ((entry = getutxent()) != NULL) {
 		/* user just logged in */
 		if (entry->ut_type == USER_PROCESS) {
 			u = new_user (entry);
-			changed = 1;
+			changed = true;
 			continue;
 		}
 		if (entry->ut_type == DEAD_PROCESS) {
@@ -205,14 +208,15 @@ void check_wtmp (void)
 		    if(strncmp(u->tty, entry->ut_line, sizeof(entry->ut_line)))
 		      continue;
 		    del_user(u);	
-		    changed = 1;
+		    changed = true;
 		    break;
 		  }
 		}
 	}
-	if(!changed) return;
-	if(show) users_list_refresh();
-	print_info();
+	if (changed) {
+	  if (show) users_list_refresh();
+	  print_info();
+	}
 }
 
 char *users_list_giveline(int line)
@@ -278,12 +282,13 @@ static bool ulist_key(int key)
 		pad_draw();
 		break;
         case 'i':
-                toggle ^= 1;
+                toggle = !toggle;
                 cmdline();
                 break;
         default:
 	        return KEY_SKIPPED;
         }
+	return KEY_HANDLED;
 }
 
 static void periodic(void)

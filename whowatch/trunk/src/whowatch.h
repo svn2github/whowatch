@@ -35,7 +35,7 @@ extern char *line_buf;
 extern int buf_size;
 extern unsigned long long ticks;
 extern WINDOW *main_win;
-extern int full_cmd;
+extern bool full_cmd;
 
 /*
  * Data associated with window are line numbered. If scrolling
@@ -107,9 +107,9 @@ void tree_title(struct user_t *);
 void do_signal(int, int);
 
 /* screen.c */								
-int below(int, struct window *);
-int above(int, struct window *);
-int outside(int, struct window *);
+bool below(int, struct window *);
+bool above(int, struct window *);
+bool outside(int, struct window *);
 void win_init(void);
 int print_line(struct window *w, char *s, int line, int virtual);
 int echo_line(struct window *w, char *s, int line);
@@ -166,7 +166,7 @@ void pad_draw(void);
 void pad_resize(void);
 void new_sub(void(*)(void *));
 char *plugin_load(char*);
-int can_draw(void);
+bool can_draw(void);
 void sub_switch(void);
 
 

@@ -111,7 +111,7 @@ static void add_item(char *title, struct item_t *i)
 	// dolog("%s: %d %d %d\n", __FUNCTION__, longest, strlen(i->descr), t->cols);	
 	if(longest + strlen(i->descr) + 3 > t->cols) 
 		t->cols = 3 + longest + strlen(i->descr);
-	if(!t->rows) t->rows = 3; /* make space for a border line */
+	if (t->rows == 0) t->rows = 3; /* make space for a border line */
 	else t->rows++;
 	list_add(&i->l_submenu, &t->items);
 }
@@ -131,8 +131,8 @@ static void submenu_print(struct submenu_t *t)
 
 static void submenu_refresh(struct submenu_t *t)
 {
-assert(submenu_wd);
-assert(cur_submenu);
+assert(submenu_wd != NULL);
+assert(cur_submenu != NULL);
 	pnoutrefresh(submenu_wd, 0, 0, 1, t->coord_x, t->rows, t->cols + t->coord_x);
 }
 
@@ -169,7 +169,7 @@ static void titles_print(void)
 
 static void submenu_create(struct submenu_t *t)
 {
-assert(t);
+assert(t != NULL);
 	submenu_wd = newpad(t->rows, t->cols);
 	if(!submenu_wd) prg_exit("Cannot create ncurses pad.");
 	wbkgd(submenu_wd, COLOR_PAIR(9));
@@ -218,17 +218,16 @@ static void menu_destroy()
 
 static void highlight_item(struct submenu_t *t, int i)
 {
-	if(item_cursor) 
-		mvwchgat(submenu_wd, item_cursor, 1, t->cols-2, A_NORMAL, 9, 0);
-	item_cursor += i;
-	mvwchgat(submenu_wd, item_cursor, 1, t->cols-2, 
-		A_REVERSE, 9, 0);
-	return;
+  if (item_cursor != 0) { 
+    mvwchgat(submenu_wd, item_cursor, 1, t->cols-2, A_NORMAL, 9, 0);
+  }
+  item_cursor += i;
+  mvwchgat(submenu_wd, item_cursor, 1, t->cols-2, A_REVERSE, 9, 0);
 } 
 
 static int change_item(struct list_head *h)
 {
-assert(cur_item);
+assert (cur_item != NULL);
 	if(h == &cur_submenu->items) return 0;
 	cur_item = list_entry(h, struct item_t, l_submenu);
 	return 1; 
@@ -237,7 +236,7 @@ assert(cur_item);
 static void change_submenu(struct list_head *h)
 {
 	if(h == &menu.submenus) return;
-assert(cur_submenu);	
+assert(cur_submenu != NULL);	
 	mvwchgat(menu.wd, 0, cur_submenu->coord_x, 
 		strlen(cur_submenu->title)+4, A_NORMAL, 9, 0);
 
@@ -259,15 +258,15 @@ wnoutrefresh(info_win.wd);
 redrawwin(info_win.wd);
 }	
 
-static int submenu_show(void)
+static bool submenu_show ()
 {
-	if(cur_item) return 1;
+	if(cur_item) return true;
 	submenu_create(cur_submenu);
 	submenu_print(cur_submenu);
 	submenu_refresh(cur_submenu);	
 	cur_item = list_entry(cur_submenu->items.prev, struct item_t, l_submenu);
 	highlight_item(cur_submenu, 1);
-	return 0;
+	return false;
 }
 
 

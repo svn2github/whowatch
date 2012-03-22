@@ -84,8 +84,8 @@ assert(main_pad->wd);
 
 static bool keys_inside(int key)
 {
-assert(sub_current);
-assert(main_pad);
+  assert (sub_current != NULL);
+  assert (main_pad != NULL);
 	if(!main_pad->wd) return 0;
 	if(sub_current->arrow >= 0 && handle_arrow(key)) return KEY_HANDLED;
 	switch(key) {
@@ -281,7 +281,7 @@ static void sub_change(struct subwin *w)
 		print_titles();
 	}
 	if(!main_pad->wd) pad_create(w);
-assert(w->plugin_draw);
+assert (w->plugin_draw != NULL);
 	pad_draw();
 
 //	} else {
@@ -481,8 +481,8 @@ void new_sub(void (*f)(void *))
  * We don't want to redraw sys info (or 'help') after 
  * cursor movement.
  */	
-int can_draw(void)
+bool can_draw ()
 {
-	if(sub_current == &sub_info || sub_current == &sub_main) return 0;
-	return 1;
+  if (sub_current == &sub_info || sub_current == &sub_main) return false;
+  return true;
 }

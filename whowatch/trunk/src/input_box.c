@@ -85,8 +85,8 @@ static void buttons(short type)
 
 static void title_print(void)
 {
-assert(title);
-assert(descr);
+  assert (title != NULL);
+  assert (descr != NULL);
 	mvwaddstr(_box.wd, 0, _box.cols/2-strlen(title)/2, title);
 	mvwaddstr(_box.wd, _in.size_y-_box.size_y, 1, descr);
 	buttons(cur_button);
@@ -164,7 +164,7 @@ static void in_keys(int key)
 		cur_button = INPUT_LINE;
 		break;
 	case KEY_BACKSPACE:
-		if(!pos) break;
+		if (pos == 0) break;
 		in[--pos] = 0;
 		mvwdelch(_in.wd, 0, pos);
 		if(offset) offset--;

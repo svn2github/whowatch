@@ -30,9 +30,9 @@ static void mark_del(void *vp)
 	p->proc = 0;
 }
 
-static inline int is_marked(struct process *p)
+static inline bool is_marked (struct process *p)
 {
-	return p->proc?0:1;
+  return (p->proc == NULL);
 }
 
 static void clear_list()

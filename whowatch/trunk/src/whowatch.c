@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -13,9 +14,9 @@ FILE *debug_file;
 unsigned long long ticks;	/* increased every TIMEOUT seconds	*/
 struct window users_list, proc_win;
 struct window *current;
-int size_changed; 
-int full_cmd = 1;	/* if 1 then show full cmd line in tree		*/
-int signal_sent;
+bool size_changed; 
+bool full_cmd = true;	/* if 1 then show full cmd line in tree		*/
+bool signal_sent;
 int screen_rows;	/* screen rows returned by ioctl  		*/
 int screen_cols;	/* screen cols returned by ioctl		*/
 char *line_buf;		/* global buffer for line printing		*/
@@ -65,7 +66,7 @@ void prg_exit(char *s)
 void allocate_error(){
 	curses_end();
 	fprintf(stderr,"Cannot allocate memory.\n");
-	exit (1);
+	exit (EXIT_FAILURE);
 }
  
 void update_load();
@@ -96,7 +97,7 @@ void send_signal(int sig, pid_t pid)
 	/*  Protect init process */
 	if(pid == INIT_PID) p = -1;
 	else p = kill(pid, sig);
-	signal_sent = 1;
+	signal_sent = true;
 	if(p == -1)
 		sprintf(buf,"Can't send signal %d to process %d",
 			sig, pid); 
@@ -114,7 +115,7 @@ static void key_action (int key)
 	int i, size;
 	if(signal_sent) {
 	    print_help();
-	    signal_sent = 0;
+	    signal_sent = false;
 	}
 
 	/* 
@@ -136,7 +137,7 @@ static void key_action (int key)
 		}
 	switch(key) {
 	case 'c':
-		full_cmd ^= 1;
+		full_cmd = !full_cmd;
 		current->redraw();
 		break;
 	case '/':
@@ -175,7 +176,7 @@ static void get_rows_cols(int *y, int *x)
 
 static void winch_handler()
 {
-	size_changed++;
+	size_changed = true;
 }
 
 /* 
@@ -205,7 +206,7 @@ static void resize(void)
 	box_resize();
 	info_resize();
 	doupdate();
-	size_changed = 0;
+	size_changed = false;
 }
 
 static void int_handler()
@@ -272,7 +273,7 @@ int main (int argc, char **argv)
 			int key = read_key();
 			if (key != ERR) key_action(key);
 		}
-		if (!tv.tv_sec && !tv.tv_usec){
+		if ((tv.tv_sec == 0) && (tv.tv_usec == 0)){
 			ticks++;
 			periodic();
 			tv.tv_sec = TIMEOUT;

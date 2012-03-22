@@ -64,7 +64,7 @@ static inline int get_pinfo(struct pinfo* i,DIR* d)
 		if(!isdigit(e->d_name[0])) continue;
 		sprintf(name+sizeof PROCDIR,"%s/stat",e->d_name);
 		f=open(name,0);
-		if(!f) continue;
+		if (f == 0) continue;
 		n=read(f,buf,63);
 		close(f);
 		if(n<0) continue;

@@ -23,7 +23,7 @@ void do_search(char *s)
 //	if(prev && current != prev) clear_search();
 //	prev = current;
 	err = regcomp(&cur_reg, s, REG_EXTENDED | REG_ICASE | REG_NOSUB);
-	if(err) {
+	if (err != 0) {
 		regerror(err, &cur_reg, errbuf, sizeof errbuf);
 		info_box(" Regex error ", errbuf);
 		return;
