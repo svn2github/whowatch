@@ -42,7 +42,9 @@ AC_TYPE_PID_T
 AC_STRUCT_ST_RDEV
 AC_HEADER_TIME
 AC_CHECK_MEMBERS([struct stat.st_rdev])
-AC_CHECK_MEMBERS([struct utmpx.ut_host])
+AC_CHECK_MEMBERS([struct utmpx.ut_host], [], [], [[
+#include <utmpx.h>
+]])
 
 # Checks for library functions.
 AC_PROG_GCC_TRADITIONAL
