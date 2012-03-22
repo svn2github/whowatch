@@ -52,8 +52,8 @@ static struct signal_t signals[] = {
  */
 static bool handle_arrow(int key)
 {
-assert(sub_current);
-assert(main_pad);
+assert(sub_current != NULL);
+assert(main_pad != NULL);
 	switch(key) {
 	case 'z':
 		if(sub_current->arrow < sub_current->lines-1) 
@@ -305,7 +305,7 @@ static void dummy_draw(void *p)
 }
 
 
-char *plugin_load(char *file) 
+char *plugin_load (const char *file) 
 {
 	void *h;
 	char *err;
@@ -387,12 +387,18 @@ static inline void builtin_set(void)
  */
 void sub_switch(void)
 {
-	if(sub_current == &sub_info || sub_current == &sub_main) return;
-	if(current == &users_list) {
-		if(sub_current == &sub_signal && main_pad->wd) pad_destroy();
-		else sub_current = &sub_user;
-	}
-	else sub_current = &sub_proc;
+  if (sub_current == &sub_info || sub_current == &sub_main) return;
+  if (current == &users_list) {
+    if ((sub_current == &sub_signal) && main_pad->wd) {
+      pad_destroy();
+    }
+    else {
+      sub_current = &sub_user;
+    }
+  }
+  else {
+    sub_current = &sub_proc;
+  }
 }
 
 void subwin_init(void)

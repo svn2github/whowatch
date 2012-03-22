@@ -119,7 +119,7 @@ int get_term(char *tty)
  * Find pid of the process which parent doesn't have control terminal.
  * Hopefully it is a pid of the login shell (ut_pid in Linux)
  */
-int get_login_pid(char *tty)
+int get_login_pid (const char *tty)
 {
 	int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_TTY, 0};
 	int t, el, i, pid, cndt = -1, l;
@@ -337,7 +337,7 @@ int getloadavg(double d[], int l)
  * It really shouldn't be in this file.
  * Count idle time.
  */
-char *count_idle(char *tty)
+char *count_idle (const char *tty)
 {
 	struct stat st;
 	static char buf[32];

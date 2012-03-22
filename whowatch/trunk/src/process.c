@@ -6,7 +6,7 @@ int lines_before_curs;	/* how many lines was inserted before cursor */
 
 static struct process *begin;
 static pid_t tree_root = 1;
-static unsigned int show_owner;
+static bool show_owner;
 
 static void proc_del(struct process *p)
 {						
@@ -50,7 +50,7 @@ static void clear_list()
  */
 static void check_line(int line)
 {
-	if (!proc_win.offset && !proc_win.cursor) return;
+  if ((proc_win.offset == 0) && (proc_win.cursor == 0)) return;
 	if (line <= proc_win.cursor + proc_win.offset)
 		proc_win.offset++;
 }
@@ -60,8 +60,8 @@ static void synchronize(void)
 	int l = 0;
 	struct proc_t *p = tree_start(tree_root, tree_root);
 	struct process **current = &begin, *z;
-	while(p){
-		if (*current && p->priv){
+	while (p) {
+	  if ((*current != NULL) && (p->priv != NULL)) {
 			(*current)->line = l++;
 			(*current)->proc->priv = *current;
 			p = tree_next();
@@ -279,7 +279,7 @@ static bool signal_keys (int key)
 	case KEY_CTRL_U: signal = 1; break;
 	case KEY_CTRL_T: signal = 15; break;
 	}
-	if (signal) { 
+	if (signal != 0) { 
 	  dolog("%s: %x %x\n", __FUNCTION__, key, 'H');	
 	  do_signal(signal, cursor_pid());
 	  return KEY_HANDLED;
@@ -303,7 +303,7 @@ static bool proc_key (int key)
 		pad_draw();
 		break;
         case 'o':
-                show_owner ^= 1;
+                show_owner = !show_owner;
                 draw_tree();
                 break;
         case 't':

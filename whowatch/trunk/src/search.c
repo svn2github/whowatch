@@ -9,12 +9,12 @@ static regex_t cur_reg;
 /* 
  * Called by getprocbyname() and user_search(), instead of simple strncmp().
  */
-inline int reg_match(const char *s)
+inline bool reg_match(const char *s)
 {
-	return !regexec(&cur_reg, s, 0, 0, REG_NOTEOL); 
+  return (regexec(&cur_reg, s, 0, 0, REG_NOTEOL) == 0); 
 }
 
-void do_search(char *s)
+void do_search (const char *s)
 {
 	unsigned int p;
 	int err;

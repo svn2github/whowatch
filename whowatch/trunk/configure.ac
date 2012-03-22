@@ -51,7 +51,8 @@ AC_PROG_GCC_TRADITIONAL
 AC_TYPE_SIGNAL
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
-AC_CHECK_FUNCS([bzero gettimeofday inet_ntoa isascii memset regcomp select strchr strerror strncasecmp strrchr getloadavg utmpname])
+AC_CHECK_FUNCS([bzero gettimeofday inet_ntoa isascii memset regcomp select strchr strerror strncasecmp strrchr getloadavg utmpname set_escdelay])
+
 
 AC_MSG_CHECKING([whether select() modifies the time value])
 AC_TRY_RUN([#include <sys/types.h>

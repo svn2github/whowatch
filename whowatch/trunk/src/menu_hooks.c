@@ -90,10 +90,12 @@ void m_about(void)
 static void __load_plugin(char *s)
 {
 	char *err;
-	if(!(err = plugin_load(s)))
-		info_box(" Message ", "Plugin has been loaded successfully.");
-	else if(*s) 
-	info_box(" Error ", err);
+	if (!(err = plugin_load(s))) {
+	  info_box(" Message ", "Plugin has been loaded successfully.");
+	}
+	else if (*s != '\0') {
+	  info_box(" Error ", err);
+	}
 }
 
 void m_load_plugin(void)

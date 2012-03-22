@@ -157,7 +157,7 @@ static inline void change_parent(struct proc_t* p,struct proc_t* q)
 	p->parent = q;
 }
 
-int update_tree(void del(void*))
+int update_tree (void (*del) (void*))
 {
 #ifdef HAVE_PROCESS_SYSCTL
 	struct kinfo_proc *pi;

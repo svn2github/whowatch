@@ -56,11 +56,11 @@ int kvm_init();
 int can_use_kvm = 0;
 #endif
 
-void prg_exit(char *s)
+void prg_exit (const char *s)
 {
 	curses_end();
-	if(s) printf("%s\n", s);
-	exit(0);
+	if (s) printf("%s\n", s);
+	exit (EXIT_SUCCESS);
 }
 
 void allocate_error(){
@@ -149,7 +149,7 @@ static void key_action (int key)
 	case KEY_ESC:
 	case 'q':
 		curses_end();
-		exit(0);
+		exit(EXIT_SUCCESS);
 	default: return;
 	}
 SKIP:
@@ -212,7 +212,7 @@ static void resize(void)
 static void int_handler()
 {
 	curses_end();
-	exit(0);
+	exit(EXIT_SUCCESS);
 }		
 
 int main (int argc, char **argv)
@@ -226,7 +226,7 @@ int main (int argc, char **argv)
 #ifdef DEBUG
 	if (!(debug_file = fopen("debug", "w"))) {
 		printf("file debug open error\n");
-		exit(0);
+		exit(EXIT_SUCCESS);
 	}
 #endif
 	get_boot_time();

@@ -157,9 +157,12 @@ static void in_keys(int key)
 		redrawwin(main_win);
 		_box.wd = 0;
 		curs_set(0);
-		if(key == KEY_ENTER && call_back && 
-			cur_button != CANCEL_BUTTON && pos) call_back(in);
-		pos = offset = 0;
+		if ((key == KEY_ENTER) && (call_back != NULL) && 
+		    (cur_button != CANCEL_BUTTON) && (pos != 0)) {
+		  call_back(in);
+		}
+		pos = 0;
+		offset = 0;
 		bzero(in, sizeof in);
 		cur_button = INPUT_LINE;
 		break;
@@ -167,7 +170,7 @@ static void in_keys(int key)
 		if (pos == 0) break;
 		in[--pos] = 0;
 		mvwdelch(_in.wd, 0, pos);
-		if(offset) offset--;
+		if (offset != 0) offset--;
 		break;
 	case KEY_TAB:
 		cur_button++;

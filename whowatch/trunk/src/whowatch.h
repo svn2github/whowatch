@@ -94,9 +94,9 @@ unsigned int user_search(int);
 void users_list_refresh();
 
 /* whowatch.c */
-void allocate_error();
-void prg_exit(char *);
-void send_signal(int, pid_t);
+void allocate_error ();
+void prg_exit (const char *);
+void send_signal (int, pid_t);
 
 /* process.c */
 void show_tree(pid_t);
@@ -111,8 +111,8 @@ bool below(int, struct window *);
 bool above(int, struct window *);
 bool outside(int, struct window *);
 void win_init(void);
-int print_line(struct window *w, char *s, int line, int virtual);
-int echo_line(struct window *w, char *s, int line);
+int print_line(struct window *w, const char *s, int line, bool virtual);
+int echo_line(struct window *w, const char *s, int line);
 void cursor_on(struct window *w, int line);
 void cursor_off(struct window *w, int line);
 void curses_init();
@@ -129,11 +129,11 @@ void update_load(void);
 void to_line(int, struct window *);
 
 /* proctree.c */
-int update_tree();
+int update_tree (void (*del) (void*));
 
 /* procinfo.c */
 #ifdef HAVE_PROCESS_SYSCTL
-int get_login_pid(char *tty);
+int get_login_pid (const char *tty);
 #endif
 char *get_cmdline(int);
 int get_ppid(int);
@@ -141,7 +141,7 @@ char *get_name(int);
 char *get_w(int pid);
 void delete_tree_line(void *line);
 void get_state(struct process *p);
-char *count_idle(char *tty);
+char *count_idle (const char *tty);
 #ifndef HAVE_GETLOADAVG
 int getloadavg(double [], int);
 #endif
@@ -165,7 +165,7 @@ void pad_refresh(void);
 void pad_draw(void);
 void pad_resize(void);
 void new_sub(void(*)(void *));
-char *plugin_load(char*);
+char *plugin_load (const char*);
 bool can_draw(void);
 void sub_switch(void);
 
@@ -196,8 +196,8 @@ void builtin_sys_draw(void *);
 void builtin_user_draw(void *);
 
 /* search.c */
-void do_search(char *);
-int reg_match(const char *);
+void do_search (const char *);
+bool reg_match (const char *);
 
 /* menu_hooks.c */
 //void clear_search(void);

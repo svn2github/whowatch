@@ -225,12 +225,12 @@ static void highlight_item(struct submenu_t *t, int i)
   mvwchgat(submenu_wd, item_cursor, 1, t->cols-2, A_REVERSE, 9, 0);
 } 
 
-static int change_item(struct list_head *h)
+static bool change_item(struct list_head *h)
 {
 assert (cur_item != NULL);
-	if(h == &cur_submenu->items) return 0;
+	if(h == &cur_submenu->items) return false;
 	cur_item = list_entry(h, struct item_t, l_submenu);
-	return 1; 
+	return true; 
 }
 
 static void change_submenu(struct list_head *h)

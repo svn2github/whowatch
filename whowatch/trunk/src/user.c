@@ -50,7 +50,7 @@ void u_count(char *name, int p)
 	dolog("%s : dlines %d\n", __FUNCTION__, users_list.d_lines);	
 	for(i = 0; i < sizeof prot_tab/sizeof(struct prot_t); i++){
 		t = &prot_tab[i];
-		if(strncmp(t->s, name, strlen(t->s))) continue;
+		if (strncmp(t->s, name, strlen(t->s)) != 0) continue;
 		t->nr += p;
 	}
 }

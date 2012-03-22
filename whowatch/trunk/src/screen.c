@@ -86,7 +86,10 @@ void curses_init()
         keypad (users_list.wd, true);
         keypad (help_win.wd, true);
         keypad (info_win.wd, true);
+
+#ifdef HAVE_SET_ESCDELAY
 	set_escdelay (10);
+#endif
 	/* meta(stdscr, FALSE); */
 	scrollok(main_win, true);
         noecho();
@@ -146,9 +149,9 @@ void move_cursor(struct window *w, int from, int to)
 /*
  * parse string and print line with colors
  */
-int echo_line(struct window *w, char *s, int line)
+int echo_line (struct window *w, const char *s, int line)
 {
-	char *p = s, *q = s;
+	const char *p = s, *q = s;
 	int i = 0;
 	if (!p) return 1;
 	wmove(w->wd, line, 0);
@@ -230,16 +233,16 @@ static inline bool at_end(int line, struct window *w)
 }
 											
 /*
- * If virtual is not 0 then update window parameters but don't display
+ * If virtual is true then update window parameters but don't display
  */	
-int print_line(struct window *w, char *s, int line, int virtual)
+int print_line(struct window *w, const char *s, int line, bool virtual)
 {
 	int r = scr_line(line, w);
 
 	/* line is below screen */
 //	if(below(line, w)) return 0;
 
-	if (virtual == 0) echo_line(w, s, r);
+	if (!virtual) echo_line(w, s, r);
 	
 	/* printed line is at the cursor position */
 	if (r == w->cursor && !virtual)
@@ -284,12 +287,12 @@ void cursor_down(struct window *w)
 void cursor_up(struct window *w)
 {
 	char *buf;
-	if(w->cursor) {
+	if (w->cursor != 0) {
 		move_cursor(w, w->cursor, w->cursor-1);
 		w->cursor--;
 		return;
 	}
-	if(!w->offset) return;
+	if (w->offset == 0) return;
 	buf = w->giveme_line(w->offset - 1);
 	if (!buf) return;
 	wscrl(w->wd, -1);
@@ -321,8 +324,8 @@ void page_up(struct window *w)
 	int i = w->offset;
 	
 	/* no lines above visible screen */
-	if(!i && !w->cursor) return;
-	if(!i) {
+	if ((i == 0) && (w->cursor == 0)) return;
+	if ((i == 0)) {
 		move_cursor(w, w->cursor, w->offset);
 		w->cursor = w->offset;
 		return;
@@ -337,8 +340,8 @@ void key_home(struct window *w)
 {
 	int i = w->offset;
 	
-	if(!i && !w->cursor) return; 
-	if(!i) {
+	if ((i == 0) && !w->cursor) return; 
+	if ((i == 0)) {
 		move_cursor(w, w->cursor, w->offset);
 		w->cursor = w->offset;
 		return;

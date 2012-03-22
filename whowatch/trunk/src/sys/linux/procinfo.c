@@ -172,7 +172,7 @@ int getloadavg(double d[], int l)
  * It really shouldn't be in this file.
  * Count idle time.
  */
-char *count_idle(char *tty)
+char *count_idle (const char *tty)
 {
 	struct stat st;
 	static char buf[32];
