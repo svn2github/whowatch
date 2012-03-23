@@ -3,6 +3,7 @@
  * Menu/submenu definition is static - see item_bind[].
  */
 
+#include "config.h"
 #include "whowatch.h"
 #include "menu_hooks.h"
 
@@ -76,8 +77,7 @@ static struct submenu_t *add_submenu(char *s)
 	struct submenu_t *t;
 	static int pos = TITLE_START;
 	
-	t = calloc(1, sizeof *t);
-	if(!t) prg_exit("add_submenu(): cannot allocate memory.");
+	t = xcalloc (1, sizeof *t);
 	t->title = s;
 	INIT_LIST_HEAD(&t->items);
 	list_add(&t->l_menu, &menu.submenus);
@@ -171,7 +171,9 @@ static void submenu_create(struct submenu_t *t)
 {
 assert(t != NULL);
 	submenu_wd = newpad(t->rows, t->cols);
-	if(!submenu_wd) prg_exit("Cannot create ncurses pad.");
+	if (!submenu_wd) {
+	  errx (EXIT_FAILURE, "Cannot create ncurses pad.");
+	}
 	wbkgd(submenu_wd, COLOR_PAIR(9));
 	werase(submenu_wd);
  	box(submenu_wd, ACS_VLINE, ACS_HLINE);	
@@ -196,7 +198,9 @@ static void menu_create(void)
 {
 	set_size();
 	menu.wd = newpad(1, menu.cols);
-	if(!menu.wd) prg_exit("menu_create(): Cannot allocate memory.");
+	if (!menu.wd) {
+	  errx (EXIT_FAILURE, "menu_create(): Cannot allocate memory.");
+	}
 	wbkgd(menu.wd, COLOR_PAIR(9));
 //	overwrite(info_win.wd, menu.wd);
 	werase(menu.wd);

@@ -1,9 +1,10 @@
+#include "config.h"
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include "whowatch.h"
-#include "config.h"
+
 
 #ifdef DEBUG
 FILE *debug_file;
@@ -56,21 +57,6 @@ int kvm_init();
 int can_use_kvm = 0;
 #endif
 
-void prg_exit (const char *s)
-{
-	curses_end();
-	if (s) printf("%s\n", s);
-	exit (EXIT_SUCCESS);
-}
-
-void allocate_error(){
-	curses_end();
-	fprintf(stderr,"Cannot allocate memory.\n");
-	exit (EXIT_FAILURE);
-}
- 
-void update_load();
-
 /*
  * Process these function after each TIMEOUT (default 3 seconds).
  * Order is important because some windows are on the top
@@ -106,9 +92,6 @@ void send_signal(int sig, pid_t pid)
 	echo_line(&help_win, buf, 0);
 	wnoutrefresh(help_win.wd);
 }
-
-void m_search(void);
-void help(void);
 
 static void key_action (int key)
 {
@@ -148,7 +131,6 @@ static void key_action (int key)
 		break;
 	case KEY_ESC:
 	case 'q':
-		curses_end();
 		exit(EXIT_SUCCESS);
 	default: return;
 	}
@@ -163,15 +145,15 @@ SKIP:
 	doupdate();
 }
 
-static void get_rows_cols(int *y, int *x)
+static void get_rows_cols (int *y, int *x)
 {
-	struct winsize win;
-	if (ioctl(1,TIOCGWINSZ,&win) != -1){
-                *y = win.ws_row;
-		*x = win.ws_col;
-		return;
-	}
-	prg_exit("get_row_cols(): ioctl error: cannot read screen size.");
+  struct winsize win;
+
+  if (ioctl(1,TIOCGWINSZ,&win) == -1) {
+    err(EXIT_FAILURE, "get_row_cols(): ioctl error: cannot read screen size.");
+  }
+  *y = win.ws_row;
+  *x = win.ws_col;
 }								
 
 static void winch_handler()
@@ -211,7 +193,6 @@ static void resize(void)
 
 static void int_handler()
 {
-	curses_end();
 	exit(EXIT_SUCCESS);
 }		
 
@@ -232,9 +213,7 @@ int main (int argc, char **argv)
 	get_boot_time();
 	get_rows_cols(&screen_rows, &screen_cols);
 	buf_size = screen_cols + screen_cols/2;
-	line_buf = malloc(buf_size);
-	if (!line_buf)
-		errx(1, "Cannot allocate memory for buffer.");
+	line_buf = xmalloc(buf_size);
 
 	curses_init();
 	current = &users_list;
@@ -258,42 +237,22 @@ int main (int argc, char **argv)
 	tv.tv_usec = 0;
 	
 	for(;;) {				/* main loop */
-#ifndef RETURN_TV_IN_SELECT
-		struct timeval before;
-		struct timeval after;
-#endif
 		fd_set rfds;
 		int retval;
 		
 		FD_ZERO(&rfds);
 		FD_SET(STDIN_FILENO,&rfds);
-#ifdef RETURN_TV_IN_SELECT
-		retval = select(1, &rfds, 0, 0, &tv);
-		if(retval > 0) {
-			int key = read_key();
-			if (key != ERR) key_action(key);
-		}
-		if ((tv.tv_sec == 0) && (tv.tv_usec == 0)){
-			ticks++;
-			periodic();
-			tv.tv_sec = TIMEOUT;
-		}
-#else
-		gettimeofday(&before, 0);
-		retval = select(1, &rfds, 0, 0, &tv);
-		gettimeofday(&after, 0);
-		tv.tv_sec -= (after.tv_sec - before.tv_sec);
-		if(retval > 0) {
-			int key = read_key();
-			if (key != ERR) key_action(key);
-		}
-		if(tv.tv_sec <= 0) {
-			ticks++;
-			periodic();
-			tv.tv_sec = TIMEOUT;
+		retval = select (STDIN_FILENO + 1, &rfds, NULL, NULL, &tv);
 
+		if (retval > 0) {
+			int key = read_key();
+			if (key != ERR) key_action(key);
 		}
-#endif
+		if ((tv.tv_sec == 0) && (tv.tv_usec == 0)) {
+			ticks++;
+			periodic();
+			tv.tv_sec = TIMEOUT;
+		}
 		if (size_changed) resize();
 	}
 }

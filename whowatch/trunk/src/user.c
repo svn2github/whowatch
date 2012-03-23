@@ -75,8 +75,7 @@ struct user_t *alloc_user(struct utmpx *entry)
 {
 	struct user_t *u;
 	int ppid;
-	u = calloc(1, sizeof *u);
-	if(!u) errx(1, "Cannot allocate memory.");
+	u = xcalloc(1, sizeof *u);
 	strncpy (u->name, entry->ut_user, sizeof(entry->ut_user));
 	strncpy (u->tty, entry->ut_line, sizeof(entry->ut_line));
 #ifdef HAVE_STRUCT_UTMPX_UT_HOST

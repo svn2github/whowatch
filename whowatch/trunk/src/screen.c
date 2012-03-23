@@ -2,8 +2,10 @@
  * Screen manipulation routines. Most of the code related to ncurses
  * is here.
  */
-#include <err.h>
+
 #include "config.h"
+#include <err.h>
+#include <stdlib.h>
 #include "whowatch.h"
 
 struct window help_win, info_win;
@@ -40,8 +42,7 @@ static void alloc_color(void)
  */
 void win_init(void)
 {
-	curs_buf = realloc(curs_buf, screen_cols * sizeof(chtype));
-	if(!curs_buf) errx(1, "%s: Cannot allocate memory.", __FUNCTION__);
+	curs_buf = xrealloc(curs_buf, screen_cols * sizeof(chtype));
 	bzero(curs_buf, sizeof(chtype) * screen_cols);
 	users_list.rows = screen_rows - RESERVED_LINES - 1;
 	users_list.cols = screen_cols - 2; 	
@@ -93,15 +94,23 @@ void curses_init()
 	/* meta(stdscr, FALSE); */
 	scrollok(main_win, true);
         noecho();
-	//term_raw();
+
+	{
+	  int i = atexit (&curses_end);
+	  if (i != 0) {
+	    errx (EXIT_FAILURE, "cannot set exit function");
+	  }
+	}
 }				
 
-void curses_end()
+void curses_end ()
 {
+  if (!isendwin()) {
 	werase(help_win.wd);
 	wrefresh(help_win.wd);
 	endwin();
         curs_set(old_curs_vis);            /* enable cursor */
+  }
 }
 
 void cursor_on(struct window *w, int line)
@@ -201,17 +210,17 @@ int inline scr_line(int l, struct window *w)
  * Returns true if a given data line number is above or below the
  * visible part of a window.
  */
-inline bool outside (int l, struct window *w)
+bool outside (int l, struct window *w)
 {
   return (above (l, w) || below (l, w));
 }
 
-inline bool below (int l, struct window *w)
+bool below (int l, struct window *w)
 {
   return (l > w->offset + w->rows);
 }
 
-inline bool above (int l, struct window *w)
+bool above (int l, struct window *w)
 {
   return (l < w->offset);
 }
@@ -219,7 +228,7 @@ inline bool above (int l, struct window *w)
 /* 
  * Returns true if a given screen line is a last line of data.
  */
-static inline bool at_last(int line, struct window *w)
+static bool at_last(int line, struct window *w)
 {
 	return (line == w->d_lines - 1 - w->offset);
 }
@@ -227,7 +236,7 @@ static inline bool at_last(int line, struct window *w)
 /* 
  * Returns true if line is at the end of window.
  */
-static inline bool at_end(int line, struct window *w)
+static bool at_end(int line, struct window *w)
 {
 	return (line == w->rows);
 }

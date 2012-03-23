@@ -8,6 +8,7 @@
 #include <string.h>
 #include <signal.h>
 #include <sys/stat.h>
+#include <sys/select.h>
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/ioctl.h>
@@ -85,6 +86,9 @@ struct process
 	struct proc_t *proc;
 };
 
+/* help.c */
+void help ();
+
 /* user.c */
 void users_init(void);
 void check_wtmp(void);
@@ -94,8 +98,6 @@ unsigned int user_search(int);
 void users_list_refresh();
 
 /* whowatch.c */
-void allocate_error ();
-void prg_exit (const char *);
 void send_signal (int, pid_t);
 
 /* process.c */
@@ -153,8 +155,7 @@ void get_boot_time(void);
 char *get_owner_name(int u);
 
 /* block.c */
-void *get_empty(int, struct list_head *);
-int free_entry(void *, int, struct list_head *);
+void *get_empty (int, struct list_head *);
 void dolog(const char *, ...);
 
 /* subwin.c */
@@ -202,6 +203,17 @@ bool reg_match (const char *);
 /* menu_hooks.c */
 //void clear_search(void);
 void set_search(char *);
+void m_search ();
 
 /* kbd.c */
 int read_key ();
+
+/* util.c */
+#ifndef RETURN_TV_IN_SELECT
+int _select (int nfds, fd_set *readfds, fd_set *writefds,
+	    fd_set *exceptfds, struct timeval *timeout);
+#define select _select
+#endif
+void* xmalloc (size_t size);
+void* xcalloc (size_t nmemb, size_t size);
+void *xrealloc (void *ptr, size_t size);

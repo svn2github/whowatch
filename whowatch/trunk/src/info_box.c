@@ -4,6 +4,7 @@
  * action for any key is to destroy the sub window.
  */
  
+#include "config.h"
 #include "whowatch.h"
 #include "subwin.h"
 
@@ -66,7 +67,9 @@ static void box_create(void)
 	if(_box.wd) return;
 	set_size();
 	_box.wd = newpad(_box.rows, _box.cols);
-	if(!_box.wd) prg_exit("box_create(): cannot allocate memory.");
+	if (!_box.wd) {
+	  errx (EXIT_FAILURE, "box_create(): cannot allocate memory.");
+	}
 	wbkgd(_box.wd, COLOR_PAIR(9));
 	werase(_box.wd);
 	box(_box.wd, ACS_VLINE, ACS_HLINE);

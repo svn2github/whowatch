@@ -1,3 +1,4 @@
+#include "config.h"
 #include "whowatch.h"
 #include <regex.h>
 

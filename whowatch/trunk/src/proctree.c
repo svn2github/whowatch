@@ -3,6 +3,7 @@
  *  version: 20000511
  */
 
+#include "config.h"
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -10,8 +11,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
-#include "config.h"
-
+#include "whowatch.h"
 
 #ifdef HAVE_PROCESS_SYSCTL
 #include <sys/param.h>
@@ -119,7 +119,7 @@ static inline struct proc_t* new_proc(int n)
 	struct proc_t* p = cache;
 	cache = 0;
 	if (!p) {
-		p = (struct proc_t*) malloc(sizeof *p);
+		p = (struct proc_t*) xmalloc(sizeof *p);
 	}
 	memset(p,0,sizeof *p);
 	p->pid = n;

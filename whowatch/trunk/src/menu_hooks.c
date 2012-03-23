@@ -1,6 +1,7 @@
 /* 
  * All bindings to menu items.
  */
+#include "config.h"
 #include "whowatch.h"
 #include "subwin.h"
 #include "pluglib.h"
@@ -10,7 +11,7 @@ static char *prev_search;
 void  m_exit(void)
 {
 	dolog("%s: entering\n", __FUNCTION__);
-	prg_exit("");
+	exit (EXIT_SUCCESS);
 }	
 void m_details(void)
 {

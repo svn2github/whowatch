@@ -1,3 +1,4 @@
+#include "config.h"
 #include "whowatch.h"
 #include "proctree.h"
 
@@ -68,8 +69,7 @@ static void synchronize(void)
 			current = &((*current)->next);
 			continue;
 		}
-		z = malloc(sizeof *z);
-		if (!z) allocate_error();
+		z = xmalloc(sizeof *z);
 		allocated++;
 		proc_win.d_lines++;
 		memset(z, 0, sizeof *z);

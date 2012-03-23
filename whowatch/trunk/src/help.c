@@ -2,6 +2,7 @@
  * In fact it is a special plugin because it uses plugin API.
  * It implements context sensitive help messages.
  */
+#include "config.h"
 #include "whowatch.h"
 #include "pluglib.h"
 
@@ -58,7 +59,7 @@ static void show_help(void *unused)
 	sub_help();
 }
 
-void help(void)
+void help ()
 {
 	new_sub(show_help);
 }

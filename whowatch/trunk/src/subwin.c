@@ -3,8 +3,8 @@
  * information (ie. help) or signal list. Some subwindows has a builtin
  * plugin and can handle loaded plugins.
  */
-#include "whowatch.h"
 #include "config.h"
+#include "whowatch.h"
 #include "subwin.h"
 #include "pluglib.h"
 #include <dlfcn.h>
@@ -154,13 +154,17 @@ static inline void print_titles(void)
  */
 static void pad_create(struct subwin *w)
 {
-assert(sub_current);
-	main_pad->wd = newpad(SUBWIN_ROWS, SUBWIN_COLS);
-	if(!main_pad->wd) prg_exit("pad_create(): cannot create details window. [1]");
+  assert(sub_current);
+  main_pad->wd = newpad(SUBWIN_ROWS, SUBWIN_COLS);
+  if (!main_pad->wd) {
+    errx (EXIT_FAILURE, "pad_create(): cannot create details window. [1]");
+  }
 	set_size(main_pad);
 	w->offset = w->lines = w->xoffset = 0;
 	border_wd = newpad(BORDER_ROWS+1, BORDER_COLS+1);
-	if(!border_wd) prg_exit("pad_create(): cannot create details window. [2]");
+	if(!border_wd) {
+	  errx (EXIT_FAILURE, "pad_create(): cannot create details window. [2]");
+	}
 	wbkgd(border_wd, COLOR_PAIR(8));
 	werase(border_wd);
 	box(border_wd, ACS_VLINE, ACS_HLINE);
@@ -174,10 +178,14 @@ assert(sub_current);
  */
 static inline void pad_destroy(void)
 {
-	if(delwin(main_pad->wd) == ERR) prg_exit("Cannot delete details window.");
-	if(delwin(border_wd) == ERR) prg_exit("Cannot delete details window.");
-	main_pad->wd = 0;
-	redrawwin(main_win);
+  if (delwin(main_pad->wd) == ERR) {
+    errx (EXIT_FAILURE, "Cannot delete details window.");
+  }
+  if (delwin(border_wd) == ERR) {
+    errx (EXIT_FAILURE, "Cannot delete details window.");
+  }
+  main_pad->wd = 0;
+  redrawwin(main_win);
 }
 
 void pad_refresh(void)
@@ -407,8 +415,7 @@ void subwin_init(void)
 	sub_main.plugin_draw = dummy_draw;
 	sub_main.plugin_clear = dummy;
 	sub_main.plugin_cleanup = dummy;
-	main_pad = calloc(1, sizeof(struct pad_t));
-	if(!main_pad) prg_exit("subwin_init(): cannot allocate memory.");
+	main_pad = xcalloc(1, sizeof(struct pad_t));
 	sub_main.arrow = -1;
 	memcpy(&sub_proc, &sub_main, sizeof(sub_main));
 	memcpy(&sub_user, &sub_main, sizeof(sub_main));
