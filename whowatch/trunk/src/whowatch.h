@@ -30,8 +30,8 @@
 #define INIT_PID		1
 #define real_line_nr(x,y)	((x) - (y)->offset)
 
-extern FILE *debug_file;
-extern int screen_rows, screen_cols;
+extern int screen_rows;
+extern int screen_cols;
 extern char *line_buf;
 extern int buf_size;
 extern unsigned long long ticks;
@@ -73,7 +73,10 @@ struct user_t
   int line;                             /* line number                  */
 };
 
-extern struct window users_list, proc_win, help_win, info_win;
+extern struct window users_list;
+extern struct window proc_win;
+extern struct window help_win;
+extern struct window info_win;
 extern struct window *current;
 
 struct process
@@ -141,22 +144,15 @@ char *get_cmdline(int);
 int get_ppid(int);
 char *get_name(int);
 char *get_w(int pid);
-void delete_tree_line(void *line);
 void get_state(struct process *p);
 char *count_idle (const char *tty);
 #ifndef HAVE_GETLOADAVG
 int getloadavg(double [], int);
 #endif
-void proc_details(int);
-void sys_info(int);
 void get_boot_time(void);
 
 /* owner.c */
 char *get_owner_name(int u);
-
-/* block.c */
-void *get_empty (int, struct list_head *);
-void dolog(const char *, ...);
 
 /* subwin.c */
 bool sub_keys(int);
@@ -201,7 +197,6 @@ void do_search (const char *);
 bool reg_match (const char *);
 
 /* menu_hooks.c */
-//void clear_search(void);
 void set_search(char *);
 void m_search ();
 
@@ -217,3 +212,4 @@ int _select (int nfds, fd_set *readfds, fd_set *writefds,
 void* xmalloc (size_t size);
 void* xcalloc (size_t nmemb, size_t size);
 void *xrealloc (void *ptr, size_t size);
+void dolog (const char *format, ...);

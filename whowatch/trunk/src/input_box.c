@@ -126,11 +126,6 @@ static int box_create(void)
 	return 1;
 }
 
-void clb(char *s)
-{
-	dolog("%s: in: %s\n", __FUNCTION__, s);
-}
-
 /* 
  * Create new input box. Callback function will be called
  * when ENTER is pressed with inbox input data as an argument.

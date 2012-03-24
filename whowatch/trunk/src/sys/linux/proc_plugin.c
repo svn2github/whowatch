@@ -125,7 +125,7 @@ static struct netconn_t *tcp_find(unsigned int inode, struct list_head *head)
 static struct netconn_t *new_netconn(unsigned int inode, struct netconn_t *src)
 {
 	struct netconn_t *t = 0;
-	t = get_empty(sizeof *t, &tcp_blocks);
+	t = xmalloc (sizeof *t);
 	memcpy(t, src, sizeof *t);
 //	t->used = 1;
 	t->inode = inode;

@@ -39,6 +39,5 @@ struct subwin {
 };
 
 
-extern struct subwin sub_main, sub_proc, sub_user, sub_signal;
 extern struct subwin *sub_current;
 extern struct pad_t *main_pad;

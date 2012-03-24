@@ -5,19 +5,15 @@
 #include <sys/wait.h>
 #include "whowatch.h"
 
-
-#ifdef DEBUG
-FILE *debug_file;
-#endif
-
 #define TIMEOUT 	3
 
 unsigned long long ticks;	/* increased every TIMEOUT seconds	*/
-struct window users_list, proc_win;
+struct window users_list;
+struct window proc_win;
 struct window *current;
-bool size_changed; 
+static bool size_changed; 
 bool full_cmd = true;	/* if 1 then show full cmd line in tree		*/
-bool signal_sent;
+static bool signal_sent;
 int screen_rows;	/* screen rows returned by ioctl  		*/
 int screen_cols;	/* screen cols returned by ioctl		*/
 char *line_buf;		/* global buffer for line printing		*/
@@ -54,7 +50,7 @@ static bool (*key_funct[])(int) = {
 
 #ifdef HAVE_LIBKVM
 int kvm_init();
-int can_use_kvm = 0;
+bool can_use_kvm = false;
 #endif
 
 /*
@@ -201,15 +197,9 @@ int main (int argc, char **argv)
 	struct timeval tv;
 
 #ifdef HAVE_LIBKVM
-	if (kvm_init()) can_use_kvm = 1;
+	if (kvm_init()) can_use_kvm = true;
 #endif
 	
-#ifdef DEBUG
-	if (!(debug_file = fopen("debug", "w"))) {
-		printf("file debug open error\n");
-		exit(EXIT_SUCCESS);
-	}
-#endif
 	get_boot_time();
 	get_rows_cols(&screen_rows, &screen_cols);
 	buf_size = screen_cols + screen_cols/2;

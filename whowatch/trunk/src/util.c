@@ -1,17 +1,19 @@
 #include "config.h"
+
 #include <err.h>
 #include <stdlib.h>
 #include <sys/time.h>
+#include <time.h>
+
 #include "whowatch.h"
 
 #ifndef RETURN_TV_IN_SELECT
-
-/* Taken from the glibc manual */
 
 /*
   Subtract the `struct timeval' values X and Y,
   storing the result in RESULT.
   Return 1 if the difference is negative, otherwise 0.
+  Taken from the glibc manual.
 */
 static int timeval_subtract (struct timeval *result,
 			     struct timeval *x,
@@ -62,6 +64,7 @@ int _select (int nfds, fd_set *readfds, fd_set *writefds,
 
 #endif /* !RETURN_TV_IN_SELECT */
 
+
 void* xmalloc (size_t size)
 {
   void *ptr = malloc (size);
@@ -87,4 +90,33 @@ void *xrealloc (void *ptr, size_t size)
     err (EXIT_FAILURE, NULL);
   }
   return ptr;
+}
+
+
+#ifdef DEBUG
+static FILE *debug_file = NULL;
+#endif
+
+void dolog (const char *format, ...)
+{
+#ifdef DEBUG
+        va_list ap;
+        char *c;
+	time_t tm;
+
+	if (!debug_file) {
+	  if (!(debug_file = fopen ("whowatch.log", "w"))) {
+	    errx (EXIT_FAILURE, "file debug open error\n");
+	  }
+	}
+
+        tm = time (0);
+        c = ctime (&tm);
+        *(c + strlen(c) - 1) = 0;
+        fprintf (debug_file, "%s: ", c);
+        va_start (ap, format);
+        vfprintf (debug_file, format, ap);
+        va_end (ap);
+        fflush (debug_file);
+#endif
 }

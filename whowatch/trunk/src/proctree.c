@@ -84,14 +84,14 @@ static inline int get_pinfo(struct pinfo* i,DIR* d)
 static struct proc_t proc_special[2] = {{0},{1}};
 static struct proc_t *hash_table[HASHSIZE];
 static struct proc_t *main_list = 0;
-int num_proc = 1;
+static int num_proc = 1;
 
 static inline int hash_fun(int n)
 {
 	return n&(HASHSIZE-1);
 }
 
-struct proc_t* find_by_pid(int n)
+static struct proc_t* find_by_pid(int n)
 {
 	struct proc_t* p;
 	if(n<=1) return &proc_special[n];
@@ -104,24 +104,17 @@ struct proc_t* find_by_pid(int n)
 	return p;
 }
 
-static struct proc_t* cache = 0;
-
 static inline void remove_proc(struct proc_t* p)
 {
 	list_del(p,hash);
-	if(cache) free(cache);
-	cache = p;
 	num_proc--;
 }
 
 static inline struct proc_t* new_proc(int n)
 {
-	struct proc_t* p = cache;
-	cache = 0;
-	if (!p) {
-		p = (struct proc_t*) xmalloc(sizeof *p);
-	}
-	memset(p,0,sizeof *p);
+        struct proc_t* p;
+
+	p = (struct proc_t*) xcalloc (1, sizeof *p);
 	p->pid = n;
 
 	list_add(hash_table[hash_fun(n)], p, hash);

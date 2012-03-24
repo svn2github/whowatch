@@ -17,11 +17,6 @@ struct proc_t {
 	void* priv;
 };
 
-int update_tree(void del(void*));
-int update_tree();
-struct proc_t* find_by_pid(int pid);
 struct proc_t* tree_start(int root, int start);
 struct proc_t* tree_next();
 char *tree_string(int root, struct proc_t *proc);
-
-extern int num_proc;

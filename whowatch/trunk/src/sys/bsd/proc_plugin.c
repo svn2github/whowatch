@@ -5,12 +5,29 @@
  * needed, in FreeBSD and OpenBSD sysctl() is used (which
  * gives better performance)
  */
+
+#include "config.h"
+
 #include <err.h>
+#include <sys/param.h>
+#include <sys/sysctl.h>
+#include <sys/proc.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
+#ifdef HAVE_SYS_USER_H
+#include <sys/user.h>
+#endif
+
+#ifdef HAVE_LIBKVM
+#include <kvm.h>
+#endif
+
 #include "pluglib.h"
 #include "whowatch.h"
 
 #ifdef HAVE_LIBKVM
-kvm_t *kd;
+static kvm_t *kd;
 extern int can_use_kvm;
 #endif
 
@@ -85,7 +102,6 @@ static inline int hash(int n)
 }
 
 static LIST_HEAD(tcp_l);
-static LIST_HEAD(tcp_blocks);
 static struct list_head tcp_hashtable[HASH_SIZE];
 
 static void hash_init(struct list_head *hash)
@@ -126,7 +142,7 @@ static struct netconn_t *tcp_find(unsigned int inode, struct list_head *head)
 static struct netconn_t *new_netconn(unsigned int inode, struct netconn_t *src)
 {
 	struct netconn_t *t = 0;
-	t = get_empty(sizeof *t, &tcp_blocks);
+	t = xmalloc (sizeof *t);
 	memcpy(t, src, sizeof *t);
 //	t->used = 1;
 	t->inode = inode;

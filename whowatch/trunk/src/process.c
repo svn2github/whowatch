@@ -2,8 +2,7 @@
 #include "whowatch.h"
 #include "proctree.h"
 
-int allocated;
-int lines_before_curs;	/* how many lines was inserted before cursor */
+static int allocated;
 
 static struct process *begin;
 static pid_t tree_root = 1;
@@ -189,20 +188,6 @@ unsigned int getprocbyname(int l)
 	}
 	return -1;
 }
-
-#ifdef DEBUG
-static void dump_list(void )
-{
-	struct process *p = begin;
-	fprintf(debug_file,"\nbegin %p\n", begin);
-	while(p){
-		fprintf(debug_file, "%p next %p, line %d, pid %d %s\n",p,p->next,
-			p->line,p->proc->pid, get_cmdline(p->proc->pid));
-		p = p->next;
-	}
-	fflush(debug_file);
-}
-#endif
 
 void tree_title(struct user_t *u)
 {

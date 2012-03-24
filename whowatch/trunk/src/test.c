@@ -6,15 +6,15 @@
 
 #define MAILBOX_PATH	"/var/spool/mail"
 
-int plugin_type = USER_PLUGIN;
+static int plugin_type = USER_PLUGIN;
 
-int plugin_init(void *unused) 
+static int plugin_init(void *unused) 
 {
 	println("Initializing plugin...");
 	return APPEND | PERIODIC;
 }
 
-void plugin_draw(void *p)
+static void plugin_draw(void *p)
 {
 	char *name = (char*)p;
 	char buf[128];

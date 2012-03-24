@@ -13,6 +13,7 @@ void  m_exit(void)
 	dolog("%s: entering\n", __FUNCTION__);
 	exit (EXIT_SUCCESS);
 }	
+
 void m_details(void)
 {
 	sub_keys('d');
@@ -109,13 +110,6 @@ static void search(char *s)
 	/* search functions are located in search.c */
 	do_search(s);	
 }
-
-/*
-void clear_search(void)
-{
-	prev_search = 0;
-}
-*/
 
 void set_search(char *s)
 {

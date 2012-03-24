@@ -9,7 +9,6 @@
 #include "whowatch.h"
 #include "proctree.h"
 #include "config.h"
-#include "procinfo.h"
 
 #define EXEC_FILE	128
 #define elemof(x)	(sizeof (x) / sizeof*(x))

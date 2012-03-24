@@ -40,7 +40,7 @@ static void procwin_help(void)
 	title("^K"); println(" - send KILL signal");
 }
 	
-void sub_help(void)
+static void sub_help(void)
 {
 	println("");
         title("DETAILS WINDOW:\n"); newln();

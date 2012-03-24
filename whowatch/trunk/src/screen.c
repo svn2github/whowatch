@@ -8,13 +8,14 @@
 #include <stdlib.h>
 #include "whowatch.h"
 
-struct window help_win, info_win;
+struct window help_win;
+struct window info_win;
 static chtype *curs_buf;
-extern int screen_cols;
-int old_curs_vis = 1;	/* this is the cursor mode, set to normal as default */ 
+int screen_cols;
+static int old_curs_vis = 1;	/* this is the cursor mode, set to normal as default */ 
 WINDOW *main_win;
 
-char *help_line[] = 
+static char *help_line[] = 
 	{
 	"\001[F1]Help [F9]Menu [ENT]proc all[t]ree [i]dle/cmd [c]md [d]etails [s]ysinfo",
 	"\001[ENT]users [c]md all[t]ree [d]etails [o]wner [s]ysinfo sig[l]ist ^[K]ILL",
@@ -144,12 +145,12 @@ return;
 */
 	wattrset(w->wd, A_NORMAL);
 	wmove(w->wd, line, 0);
-	for(i = 0; curs_buf[i]; i++)
+	for(i = 0; curs_buf[i] != 0; i++)
 		waddch(w->wd, curs_buf[i]);
 	wattrset(w->wd, A_BOLD);
 }
 
-void move_cursor(struct window *w, int from, int to)
+static void move_cursor(struct window *w, int from, int to)
 {
 	cursor_off(w, from);
 	cursor_on(w, to);
@@ -201,7 +202,7 @@ void update_load()
 	wnoutrefresh(info_win.wd);
 }
 
-int inline scr_line(int l, struct window *w)
+static int scr_line(int l, struct window *w)
 {
 	return (l - w->offset);
 }

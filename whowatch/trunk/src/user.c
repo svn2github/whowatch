@@ -42,7 +42,7 @@ static struct prot_t prot_tab[] = {
  *  update number of users (ssh users, telnet users...) and change 
  *  prot in the appropriate user structure.
  */
-void u_count(char *name, int p)
+static void u_count(char *name, int p)
 {
 	int i;
 	struct prot_t *t;
@@ -58,7 +58,7 @@ void u_count(char *name, int p)
 /*
  * After deleting line, update line numbers in each user structure 
  */
-void update_line(int line)
+static void update_line(int line)
 {
 	struct user_t *u;
 	struct list_head *tmp;
@@ -71,7 +71,7 @@ void update_line(int line)
 /* 
  * Create new user structure and fill it
  */
-struct user_t *alloc_user(struct utmpx *entry)
+static struct user_t *alloc_user(struct utmpx *entry)
 {
 	struct user_t *u;
 	int ppid;
@@ -218,7 +218,7 @@ void check_wtmp (void)
 	}
 }
 
-char *users_list_giveline(int line)
+static char *users_list_giveline(int line)
 {
 	struct user_t *u;
 	struct list_head *h;	
