@@ -2,6 +2,9 @@
  * All bindings to menu items.
  */
 #include "config.h"
+
+#include <stdlib.h>
+
 #include "whowatch.h"
 #include "subwin.h"
 #include "pluglib.h"

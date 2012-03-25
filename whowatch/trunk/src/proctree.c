@@ -4,6 +4,7 @@
  */
 
 #include "config.h"
+
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -11,14 +12,12 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
-#include "whowatch.h"
-
 #ifdef HAVE_PROCESS_SYSCTL
 #include <sys/param.h>
-#include <sys/sysctl.h>
-#include <sys/user.h>
 #endif
 
+#include "whowatch.h"
+#include "machine.h"
 #include "proctree.h"
 
 #define PROCDIR "/proc"
@@ -39,10 +38,6 @@
 #define is_on_list(p,f) (!!(p)->f.ppv)
 
 #define change_head(a,b,f) ({b=a; if(a) a->f.ppv=&b;})
-
-#ifdef HAVE_PROCESS_SYSCTL
-int get_all_info(struct kinfo_proc **);
-#endif 
 
 struct pinfo {
 	int pid;

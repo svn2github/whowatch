@@ -1,5 +1,7 @@
 SUBDIRS = sys
 
+AM_CPPFLAGS = -Isys/$(SYSTEM)
+
 bin_PROGRAMS = whowatch
 
 whowatch_SOURCES = help.c info_box.c input_box.c kbd.c kbd.h list.h \

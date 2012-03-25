@@ -4,8 +4,13 @@
  */
 
 #include "config.h"
+
+#define _BSD_SOURCE
 #include <err.h>
 #include <stdlib.h>
+#include <strings.h>
+#include <string.h>
+
 #include "whowatch.h"
 
 struct window help_win;

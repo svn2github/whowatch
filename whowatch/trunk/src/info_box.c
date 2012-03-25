@@ -5,8 +5,13 @@
  */
  
 #include "config.h"
-#include "whowatch.h"
+
+#include <err.h>
+#include <string.h>
+#include <stdlib.h>
+
 #include "subwin.h"
+#include "whowatch.h"
 
 static struct pad_t _box;	/* ncurses pad for info box	*/
 static char *info;		/* string to be displayed	*/

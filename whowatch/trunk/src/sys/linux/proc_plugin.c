@@ -5,10 +5,17 @@
  * needed, in FreeBSD and OpenBSD sysctl() is used (which
  * gives better performance)
  */
-#include <err.h>
-#include <time.h>
+
+#include "config.h"
+
+#include <strings.h>
+#include <unistd.h>
+#include <string.h>
+#include "time.h"
+
 #include "pluglib.h"
 #include "whowatch.h"
+#include "machine.h"
 
 #define EXEC_FILE	128
 #define elemof(x)	(sizeof (x) / sizeof*(x))
@@ -41,9 +48,6 @@ static void read_link(int pid, char *name)
 	println(v);
 }
 
-#if 0
-static int used;	/* unused */
-#endif
 struct netconn_t {
 	struct list_head n_list;
 	struct list_head n_hash;

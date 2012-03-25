@@ -1,4 +1,4 @@
-#include <ncurses.h>
+#include <curses.h>
 
 #define KEY_TAB         '\011'
 #define KEY_CTRL_K      '\013'

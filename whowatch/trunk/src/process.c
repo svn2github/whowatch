@@ -1,4 +1,8 @@
 #include "config.h"
+
+#include <stdlib.h>
+#include <string.h>
+
 #include "whowatch.h"
 #include "proctree.h"
 

@@ -1,9 +1,15 @@
 #include "config.h"
+
+#include <err.h>
 #include <stdlib.h>
-#include <unistd.h>
+#include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <unistd.h>
+#include <signal.h>
+
 #include "whowatch.h"
+#include "machine.h"
 
 #define TIMEOUT 	3
 
@@ -47,11 +53,6 @@ static bool (*key_funct[])(int) = {
 	sub_keys,
 };
 	
-
-#ifdef HAVE_LIBKVM
-int kvm_init();
-bool can_use_kvm = false;
-#endif
 
 /*
  * Process these function after each TIMEOUT (default 3 seconds).
@@ -196,10 +197,7 @@ int main (int argc, char **argv)
 {
 	struct timeval tv;
 
-#ifdef HAVE_LIBKVM
-	if (kvm_init()) can_use_kvm = true;
-#endif
-	
+	machine_init ();
 	get_boot_time();
 	get_rows_cols(&screen_rows, &screen_cols);
 	buf_size = screen_cols + screen_cols/2;

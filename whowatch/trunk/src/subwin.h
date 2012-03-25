@@ -1,4 +1,4 @@
-#include <ncurses.h>
+#include <curses.h>
 
 #define SUBWIN_COLS     64              /* virtual size of a subwindow      */
 #define SUBWIN_ROWS     128                                                                

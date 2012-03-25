@@ -4,10 +4,16 @@
  * plugin and can handle loaded plugins.
  */
 #include "config.h"
+
+#include <assert.h>
+#include <err.h>
+#include <stdlib.h>
+#include <string.h>
+#include <dlfcn.h>
+
 #include "whowatch.h"
 #include "subwin.h"
 #include "pluglib.h"
-#include <dlfcn.h>
 
 static struct subwin sub_info;		/* doesn't support plugins, for static info */
 static struct subwin sub_main;		/* contains functions for printing sysinfo  */

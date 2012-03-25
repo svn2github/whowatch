@@ -4,6 +4,12 @@
  */
 
 #include "config.h"
+
+#include <assert.h>
+#include <err.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "whowatch.h"
 #include "menu_hooks.h"
 

@@ -1,35 +1,19 @@
 /* 
  * Builtin proc plugin and sys plugin.
  * Get process info (ppid, tpgid, name of executable and so on).
- * This is OS dependent: in Linux reading files from "/proc" is
- * needed, in FreeBSD and OpenBSD sysctl() is used (which
- * gives better performance)
+ * BSD version.
  */
 
 #include "config.h"
 
-#include <err.h>
-#include <sys/param.h>
-#include <sys/sysctl.h>
-#include <sys/proc.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-
-#ifdef HAVE_SYS_USER_H
-#include <sys/user.h>
-#endif
-
-#ifdef HAVE_LIBKVM
-#include <kvm.h>
-#endif
+#include <strings.h>
+#include <string.h>
+#include <unistd.h>
+#include <time.h>
 
 #include "pluglib.h"
+#include "machine.h"
 #include "whowatch.h"
-
-#ifdef HAVE_LIBKVM
-static kvm_t *kd;
-extern int can_use_kvm;
-#endif
 
 #define EXEC_FILE	128
 #define elemof(x)	(sizeof (x) / sizeof*(x))
@@ -62,7 +46,6 @@ static void read_link(int pid, char *name)
 	println(v);
 }
 
-static int used;
 struct netconn_t {
 	struct list_head n_list;
 	struct list_head n_hash;

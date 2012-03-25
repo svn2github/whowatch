@@ -2,30 +2,18 @@
  * Get process info (ppid, tpgid, name of executable and so on).
  * BSD version.
  */
+
 #include "config.h"
 
-#include <err.h>
-#include <sys/param.h>
-#include <sys/sysctl.h>
-#include <sys/proc.h>
-#include <sys/stat.h>
+#include <string.h>
+#include <stdlib.h>
 #include <sys/types.h>
-
-#ifdef HAVE_SYS_USER_H
-#include <sys/user.h>
-#endif
-
-#ifdef HAVE_LIBKVM
-#include <kvm.h>
-#endif
+#include <sys/stat.h>
 
 #include "whowatch.h"
 #include "proctree.h"
+#include "machine.h"
 
-#ifdef HAVE_LIBKVM
-static kvm_t *kd;
-extern bool can_use_kvm;
-#endif
 
 #define EXEC_FILE	128
 #define elemof(x)	(sizeof (x) / sizeof*(x))
@@ -87,7 +75,7 @@ int get_ppid(int pid)
 /*
  * Get terminal
  */
-static int get_term(char *tty)
+static int get_term (const char *tty)
 {
 	struct stat s;
 	char buf[32];
@@ -150,7 +138,7 @@ int get_login_pid (const char *tty)
 int get_all_info(struct kinfo_proc **info)
 {
 	int mib[3] = { CTL_KERN, KERN_PROC, KERN_PROC_ALL };
-	int len, el;
+	size_t len, el;
 
 	if(sysctl(mib, 3, 0, &len, 0, 0) == -1)
 		return 0;
@@ -165,15 +153,6 @@ int get_all_info(struct kinfo_proc **info)
 /* 
  * Return the complete command line for the process
  */
-
-#ifdef HAVE_LIBKVM
-int kvm_init()
-{
-	kd = kvm_openfiles(0, 0, 0, O_RDONLY, 0);
-	if(!kd) return 0;
-	return 1;
-}
-#endif
 
 char *get_cmdline(int pid)
 {
@@ -243,20 +222,6 @@ void get_state(struct process *p)
 	p->state = s[pi.stat-1];
 }
 
-#ifndef HAVE_GETLOADAVG
-int getloadavg(double d[], int l)
-{
-	FILE *f;
-	if(!(f = fopen("/proc/loadavg", "r")))
-		return -1;
-	if(fscanf(f, "%lf %lf %lf", &d[0], &d[1], &d[2]) != 3) {
-		fclose(f);
-		return -1;
-	}
-	fclose(f);
-	return 0;
-}
-#endif
 /* 
  * It really shouldn't be in this file.
  * Count idle time.

@@ -1,10 +1,14 @@
 #include "config.h"
+
 #ifdef HAVE_PATHS_H
 #include <paths.h>
 #endif
 #ifdef HAVE_UTMP_H
 #include <utmp.h>
 #endif
+#include <err.h>
+#include <string.h>
+#include <stdlib.h>
 
 #include "whowatch.h"
 

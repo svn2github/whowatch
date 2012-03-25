@@ -1,22 +1,11 @@
 #include <stdbool.h>
-#include <stdio.h>
-#include <errno.h>
-#include <err.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <string.h>
-#include <signal.h>
-#include <sys/stat.h>
 #include <sys/select.h>
-#include <sys/types.h>
-#include <sys/time.h>
-#include <sys/ioctl.h>
-#include <curses.h>
-#include <assert.h>
 #include <utmpx.h>
-#include "list.h"
+
+#include <curses.h>
+
 #include "kbd.h"
+#include "list.h"
 
 #define member_size(type, member) sizeof(((type *)0)->member)
 
@@ -137,18 +126,12 @@ void to_line(int, struct window *);
 int update_tree (void (*del) (void*));
 
 /* procinfo.c */
-#ifdef HAVE_PROCESS_SYSCTL
-int get_login_pid (const char *tty);
-#endif
 char *get_cmdline(int);
 int get_ppid(int);
 char *get_name(int);
 char *get_w(int pid);
 void get_state(struct process *p);
 char *count_idle (const char *tty);
-#ifndef HAVE_GETLOADAVG
-int getloadavg(double [], int);
-#endif
 void get_boot_time(void);
 
 /* owner.c */
@@ -165,7 +148,6 @@ void new_sub(void(*)(void *));
 char *plugin_load (const char*);
 bool can_draw(void);
 void sub_switch(void);
-
 
 /* input_box.c */
 bool box_keys(int);

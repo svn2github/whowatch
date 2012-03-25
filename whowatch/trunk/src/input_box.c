@@ -1,5 +1,9 @@
 #include "config.h"
+
+#include <assert.h>
 #include <ctype.h>
+#include <string.h>
+
 #include "whowatch.h"
 #include "subwin.h"
 

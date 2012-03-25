@@ -4,11 +4,18 @@
  * needed, in FreeBSD and OpenBSD sysctl() is used (which
  * gives better performance)
  */
-#include <err.h>
+
+#include "config.h"
+
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <time.h>
+
 #include "whowatch.h"
 #include "proctree.h"
-#include "config.h"
+#include "machine.h"
 
 #define EXEC_FILE	128
 #define elemof(x)	(sizeof (x) / sizeof*(x))
@@ -151,21 +158,6 @@ void get_state(struct process *p)
   fclose(f);
   p->state = ((state == 'S') ? ' ' : state);
 }
-
-#ifndef HAVE_GETLOADAVG
-int getloadavg(double d[], int l)
-{
-	FILE *f;
-	if(!(f = fopen("/proc/loadavg", "r")))
-		return -1;
-	if(fscanf(f, "%lf %lf %lf", &d[0], &d[1], &d[2]) != 3) {
-		fclose(f);
-		return -1;
-	}
-	fclose(f);
-	return 0;
-}
-#endif
 
 /* 
  * It really shouldn't be in this file.
