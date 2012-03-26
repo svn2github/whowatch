@@ -132,24 +132,6 @@ int get_login_pid (const char *tty)
 	return cndt;
 }
 
-/*
- * Get information about all system processes
- */
-int get_all_info(struct kinfo_proc **info)
-{
-	int mib[3] = { CTL_KERN, KERN_PROC, KERN_PROC_ALL };
-	size_t len, el;
-
-	if(sysctl(mib, 3, 0, &len, 0, 0) == -1)
-		return 0;
-	*info = calloc(1, len);
-	if(!*info) return 0;
-	el = len/sizeof(struct kinfo_proc);
-	if(sysctl(mib, 3, *info, &len, 0, 0) == -1)
-		return 0;
-	return el;
-}
-
 /* 
  * Return the complete command line for the process
  */
@@ -251,3 +233,37 @@ char *count_idle (const char *tty)
 	return buf;
 }
 
+
+
+static int get_all_info (struct kinfo_proc **info)
+{
+	int mib[3] = { CTL_KERN, KERN_PROC, KERN_PROC_ALL };
+	size_t len, el;
+
+	if (sysctl(mib, 3, 0, &len, 0, 0) == -1)
+		return 0;
+	*info = xcalloc(1, len);
+	el = len/sizeof(struct kinfo_proc);
+	if(sysctl(mib, 3, *info, &len, 0, 0) == -1)
+		return 0;
+	return el;
+}
+
+void for_each_pinfo (void (*func) (struct pinfo *info, void *data), void *data)
+{
+  struct kinfo_proc *pi;
+  int i;
+  int el;
+
+  el = get_all_info (&pi);
+
+  for (i = 0; i < el; i++) {
+    struct pinfo p;
+
+    p.pid = pi[i].ki_pid;
+    p.ppid = pi[i].ki_ppid;
+    (*func) (&p, data);
+  }
+
+  free (pi);
+}

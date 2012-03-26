@@ -15,6 +15,7 @@
 
 struct window help_win;
 struct window info_win;
+
 static chtype *curs_buf;
 int screen_cols;
 static int old_curs_vis = 1;	/* this is the cursor mode, set to normal as default */ 

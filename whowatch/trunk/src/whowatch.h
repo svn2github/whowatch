@@ -19,13 +19,16 @@
 #define INIT_PID		1
 #define real_line_nr(x,y)	((x) - (y)->offset)
 
+/* whowatch.c */
+extern unsigned long long ticks;
+extern bool full_cmd;
 extern int screen_rows;
 extern int screen_cols;
 extern char *line_buf;
 extern int buf_size;
-extern unsigned long long ticks;
+
+/* screen.c */
 extern WINDOW *main_win;
-extern bool full_cmd;
 
 /*
  * Data associated with window are line numbered. If scrolling
@@ -62,11 +65,14 @@ struct user_t
   int line;                             /* line number                  */
 };
 
+/* whowatch.c */
 extern struct window users_list;
 extern struct window proc_win;
+extern struct window *current;
+
+/* screen.c */
 extern struct window help_win;
 extern struct window info_win;
-extern struct window *current;
 
 struct process
 {
@@ -123,7 +129,7 @@ void update_load(void);
 void to_line(int, struct window *);
 
 /* proctree.c */
-int update_tree (void (*del) (void*));
+void update_tree (void (*del) (void*));
 
 /* procinfo.c */
 char *get_cmdline(int);

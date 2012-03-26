@@ -16,7 +16,6 @@ struct list_head {
 	struct list_head *next, *prev;
 };
 
-#undef LIST_HEAD
 #define LIST_HEAD(name) \
 	struct list_head name = { &name, &name }
 

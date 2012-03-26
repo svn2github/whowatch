@@ -6,3 +6,4 @@
 void machine_init ()
 {
 }
+

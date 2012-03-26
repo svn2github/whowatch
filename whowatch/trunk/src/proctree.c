@@ -6,21 +6,13 @@
 #include "config.h"
 
 #include <unistd.h>
-#include <fcntl.h>
 #include <stdio.h>
-#include <dirent.h>
-#include <stdlib.h>
-#include <ctype.h>
 #include <string.h>
-#ifdef HAVE_PROCESS_SYSCTL
-#include <sys/param.h>
-#endif
 
 #include "whowatch.h"
 #include "machine.h"
 #include "proctree.h"
 
-#define PROCDIR "/proc"
 #define HASHSIZE 128
 
 #define list_add(l,p,f) ({			\
@@ -38,41 +30,6 @@
 #define is_on_list(p,f) (!!(p)->f.ppv)
 
 #define change_head(a,b,f) ({b=a; if(a) a->f.ppv=&b;})
-
-struct pinfo {
-	int pid;
-	int ppid;
-};
-
-#ifndef HAVE_PROCESS_SYSCTL
-static inline int get_pinfo(struct pinfo* i,DIR* d)
-{
-	static char name[32] = PROCDIR "/";
-	struct dirent* e;
-
-	for(;;) {
-		int f,n;
-		char buf[64],*p;
-
-		e=readdir(d);
-		if(!e) return 0;
-		if(!isdigit(e->d_name[0])) continue;
-		sprintf(name+sizeof PROCDIR,"%s/stat",e->d_name);
-		f=open(name,0);
-		if (f == 0) continue;
-		n=read(f,buf,63);
-		close(f);
-		if(n<0) continue;
-		buf[n]=0;
-		p = strrchr(buf+4,')') + 4;
-		i->ppid = atoi(p);
-		i->pid = atoi(buf);
-		if(i->pid<=0) continue;
-		break;
-	}
-	return 1;
-}
-#endif
 
 #define proc_zero (proc_special[0])
 #define proc_init (proc_special[1])
@@ -145,62 +102,38 @@ static inline void change_parent(struct proc_t* p,struct proc_t* q)
 	p->parent = q;
 }
 
-int update_tree (void (*del) (void*))
+void update_tree_helper (struct pinfo *ptr, void *data)
 {
-#ifdef HAVE_PROCESS_SYSCTL
-	struct kinfo_proc *pi;
-	int i, el;
-#else
-	struct pinfo info;
-	DIR *d;
-#endif
-	struct proc_t *p,*q;
-	struct proc_t *old_list;
-	int n = num_proc;
-	change_head(main_list,old_list,mlist);
-	main_list = 0;
-	
-#ifdef HAVE_PROCESS_SYSCTL
-	el = get_all_info(&pi);
-	for(i = 0; i < el; i++) {
-		p = validate_proc(pi[i].ki_pid);
-		q = validate_proc(pi[i].ki_ppid);
-#else
+  void (*del) (void*) = (void (*) (void *)) data;
+  struct proc_t *p = validate_proc (ptr->pid);
+  struct proc_t *q = validate_proc (ptr->ppid);
 
-	d=opendir(PROCDIR);
-	if(d<0) return -1;
+  if (p->parent != q) {
+    if (p->priv) del (p->priv);
+    change_parent (p, q);
+  }
+}
 
-	while( get_pinfo(&info,d) ) {
-		p = validate_proc(info.pid);
-		q = validate_proc(info.ppid);
-#endif
-		if (p->parent != q) {
-			if(p->priv) del(p->priv);
+void update_tree (void (*del) (void*))
+{
+  struct proc_t *p,*q;
+  struct proc_t *old_list;
+  change_head (main_list, old_list,mlist);
+  main_list = 0;
 
-			change_parent(p,q);
-		}
-	}
-#ifdef HAVE_PROCESS_SYSCTL
-	free(pi);
-#else
-	closedir(d);
-#endif
-	n = num_proc - n;
+  for_each_pinfo (&update_tree_helper, (void*)del);
 
-	for(p = old_list; p; p=q) {
-		while (p->child) {
-			change_parent(p->child,&proc_init);
-		}
-		if (is_on_list(p,broth)) {
-			list_del(p,broth);
-		}
-		q = p->mlist.nx;
-		if(p->priv) del(p->priv);
-		remove_proc(p);
-		n++;
-	}
-
-	return n;
+  for (p = old_list; p != NULL; p = q) {
+    while (p->child) {
+      change_parent(p->child,&proc_init);
+    }
+    if (is_on_list(p,broth)) {
+      list_del(p,broth);
+    }
+    q = p->mlist.nx;
+    if(p->priv) del(p->priv);
+    remove_proc(p);
+  }
 }
 
 /* ---------------------- */

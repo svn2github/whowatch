@@ -14,16 +14,18 @@
 #define TIMEOUT 	3
 
 unsigned long long ticks;	/* increased every TIMEOUT seconds	*/
-struct window users_list;
-struct window proc_win;
-struct window *current;
-static bool size_changed; 
 bool full_cmd = true;	/* if 1 then show full cmd line in tree		*/
-static bool signal_sent;
 int screen_rows;	/* screen rows returned by ioctl  		*/
 int screen_cols;	/* screen cols returned by ioctl		*/
 char *line_buf;		/* global buffer for line printing		*/
 int buf_size;		/* allocated buffer size			*/
+
+struct window users_list;
+struct window proc_win;
+struct window *current;
+
+static bool size_changed; 
+static bool signal_sent;
 
 struct key_handler {
         int key;

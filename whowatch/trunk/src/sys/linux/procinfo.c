@@ -7,6 +7,11 @@
 
 #include "config.h"
 
+#include <ctype.h>
+#include <dirent.h>
+#include <err.h>
+#include <fcntl.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -20,6 +25,8 @@
 #define EXEC_FILE	128
 #define elemof(x)	(sizeof (x) / sizeof*(x))
 #define endof(x)	((x) + elemof(x))
+
+#define PROCDIR "/proc"
 
 struct procinfo
 {
@@ -188,3 +195,46 @@ char *count_idle (const char *tty)
 	return buf;
 }
 
+static bool get_pinfo (struct pinfo* i,DIR* d)
+{
+	static char name[32] = PROCDIR "/";
+	struct dirent* e;
+
+	for(;;) {
+		int f,n;
+		char buf[64],*p;
+
+		e=readdir(d);
+		if(!e) return false;
+		if(!isdigit(e->d_name[0])) continue;
+		sprintf(name+sizeof PROCDIR,"%s/stat",e->d_name);
+		f=open(name,0);
+		if (f == 0) continue;
+		n=read(f,buf,63);
+		close(f);
+		if(n<0) continue;
+		buf[n]=0;
+		p = strrchr(buf+4,')') + 4;
+		i->ppid = atoi(p);
+		i->pid = atoi(buf);
+		if(i->pid<=0) continue;
+		break;
+	}
+	return true;
+}
+
+
+void for_each_pinfo (void (*func) (struct pinfo *info, void *data), void *data)
+{
+  struct pinfo info;
+  DIR *d;
+
+  d = opendir (PROCDIR);
+  if (d < 0) errx (EXIT_FAILURE, NULL);
+
+  while (get_pinfo (&info, d) ) {
+    (*func) (&info, data);
+  }
+
+  closedir (d);
+}
